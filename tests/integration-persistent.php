@@ -26,9 +26,12 @@ try{
     file_put_contents($dir.'/actors.json',json_encode($actors));
     ok($actors['Paciente']!==null && $fixture['user']!==$fixture['patient'],'Paciente y usuario NUEVOS, vinculados sin confundir IDs');
     $read=new CitaService(new CitaRepository($pdo));$booking=new ReservaService(new ReservaRepository($pdo),true);$changeRepo=new CitaChangeRepository($pdo);$changes=new CitaChangeService($changeRepo,true);
-    $findSlot=static function()use($read,$actors):array{
+    $findSlot=static function(?int $doctorId=null,?int $specialtyId=null,?string $minimumDate=null)use($read,$actors):array{
         $now=new DateTimeImmutable('now',new DateTimeZone('America/La_Paz'));$choices=$read->availabilityChoices($actors['Paciente']);
         foreach(DisponibilidadService::window($now) as $day){foreach($choices['doctors'] as $doctor){if($doctor['estado']!=='activo'){continue;}$specialty=$doctor['especialidades'][0] ?? null;if(!$specialty){continue;}$data=$read->availability($actors['Paciente'],$doctor['id_medico'],$specialty,$day);
+            if($doctorId!==null && (int)$doctor['id_medico']!==$doctorId){continue;}
+            if($specialtyId!==null && (int)$specialty!==$specialtyId){continue;}
+            if($minimumDate!==null && $day<$minimumDate){continue;}
             foreach($data['slots'] as $slot){if($slot['available']){return ['medico'=>(string)$doctor['id_medico'],'especialidad'=>(string)$specialty,'fecha'=>$day,'hora'=>$slot['hora_inicio']];}}
         }}throw new RuntimeException('No hay turno de prueba disponible.');
     };
@@ -38,7 +41,7 @@ try{
     $listing=(new CitaRepository($pdo))->listing($actors['Paciente'],[],100,0);ok(in_array($id,array_map('intval',array_column($listing,'id_cita')),true),'Cita nueva visible en agenda propia');
     $availability=$read->availability($actors['Paciente'],(int)$input['medico'],(int)$input['especialidad'],$input['fecha'],$input['hora']);ok($availability['selected']===null,'Disponibilidad descuenta cita persistida');
     denied(fn()=>$booking->reserve($actors['Paciente'],$input),'Reserva repetida rechazada, sin duplicados');
-    $next=$findSlot();$c=$changeRepo->find($actors['Paciente'],$id);
+    $c=$changeRepo->find($actors['Paciente'],$id);$next=$findSlot((int)$c['id_medico'],(int)$c['id_especialidad']);
     $changes->change($actors['Paciente'],'reprogramar',['id'=>(string)$id,'version'=>CitaChangePolicy::version($c),'fecha'=>$next['fecha'],'hora'=>$next['hora']]);
     $c=$changeRepo->find($actors['Paciente'],$id);ok((int)$c['cantidad_reprogramaciones']===1,'Trigger incrementa única reprogramación');
     denied(fn()=>$changes->change($actors['Paciente'],'reprogramar',['id'=>(string)$id,'version'=>CitaChangePolicy::version($c),'fecha'=>$input['fecha'],'hora'=>$input['hora']]),'Segunda reprogramación rechazada');
@@ -52,7 +55,8 @@ try{
     $repoPay=new PaymentWriteRepository($pdo,new PayPalSandboxService('','','',''));
     $payIds=[];
     foreach(['qr_simulado','paypal_sandbox','efectivo'] as $method){
-        $slot=$findSlot();$r=$booking->reserve($actors['Paciente'],$slot);putenv('PAYMENT_ALLOWED_APPOINTMENTS='.$r['id']);
+        $minimumDate=$method==='efectivo' ? (new DateTimeImmutable('now',new DateTimeZone('America/La_Paz')))->modify('+3 days')->format('Y-m-d') : null;
+        $slot=$findSlot(null,null,$minimumDate);$r=$booking->reserve($actors['Paciente'],$slot);putenv('PAYMENT_ALLOWED_APPOINTMENTS='.$r['id']);
         $pid=$repoPay->start($actors['Paciente'],$r['id'],$method,'demo');$payIds[$method]=['appointment'=>$r['id'],'payment'=>$pid];
         ok($pid>0,'Inicio persistente '.$method);
         if($method==='efectivo'){denied(fn()=>$repoPay->confirm($actors['Paciente'],$r['id'],$pid),'Paciente no confirma efectivo');denied(fn()=>$repoPay->confirm($actors['Recepcionista'],$r['id'],$pid),'Caja rechaza cobro fuera de horario real');continue;}

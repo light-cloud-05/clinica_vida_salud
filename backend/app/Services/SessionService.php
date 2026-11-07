@@ -18,7 +18,9 @@ final class SessionService
         ini_set('session.gc_maxlifetime', '28800');
         session_save_path($path);
         session_name($integration ? 'CVS_TEST_SESSION' : 'CVS_SESSION');
-        session_set_cookie_params(['lifetime'=>0, 'path'=>'/', 'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly'=>true, 'samesite'=>'Lax']);
+        $secure = \Clinica\Support\Environment::get('APP_ENV') === 'production'
+            || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+        session_set_cookie_params(['lifetime'=>0, 'path'=>'/', 'secure'=>$secure, 'httponly'=>true, 'samesite'=>'Lax']);
         if (!session_start()) { throw new \RuntimeException('Sesiones no disponibles.'); }
     }
 

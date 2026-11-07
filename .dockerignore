@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+vendor
+var
+tests
+docs/requisitos
+*.log

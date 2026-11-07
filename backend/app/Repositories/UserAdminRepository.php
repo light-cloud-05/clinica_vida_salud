@@ -103,7 +103,7 @@ final class UserAdminRepository implements UserAdminStore
             if ($id === null) {
                 $stmt = $this->pdo->prepare('INSERT INTO public.usuarios (id_rol,nombre_usuario,correo_acceso,contrasena_hash,estado)
                     VALUES (:role,:username,:email,:hash,:status) RETURNING id_usuario');
-                $stmt->execute($data);
+                $stmt->execute($data + ['hash' => null]);
             } else {
                 $hashPart = array_key_exists('hash', $data) ? ',contrasena_hash=:hash' : '';
                 $stmt = $this->pdo->prepare('UPDATE public.usuarios SET id_rol=:role,nombre_usuario=:username,correo_acceso=:email,estado=:status' . $hashPart . '

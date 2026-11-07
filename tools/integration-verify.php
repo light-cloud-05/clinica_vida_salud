@@ -7,7 +7,12 @@ $pdo=Connection::integration(require dirname(__DIR__).'/backend/config/database.
 $dir=dirname(__DIR__).'/var/integration';$base=json_decode(file_get_contents($dir.'/original-snapshot.json'),true);
 foreach($base['tables'] as $table=>$hash){
     $s=$pdo->prepare("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=:t AND is_identity='YES'");$s->execute(['t'=>$table]);$col=$s->fetchColumn();$where='';
-    if($col){$seq=$pdo->query("SELECT pg_get_serial_sequence('public.$table','$col')")->fetchColumn();$key=substr($seq,strrpos($seq,'.')+1);$where=' WHERE "'.$col.'"<='.(int)$base['sequences'][$key]['last_value'];}
+    if($col){$seq=$pdo->query("SELECT pg_get_serial_sequence('public.$table','$col')")->fetchColumn();$key=substr($seq,strrpos($seq,'.')+1);$limit=($base['sequences'][$key]['is_called'] ?? false) ? (int)$base['sequences'][$key]['last_value'] : 0;$where=' WHERE "'.$col.'"<='.$limit;}
+    elseif($table==='medico_especialidad'){
+        $doctorMax=(int)$base['sequences']['medicos_id_medico_seq']['last_value'];
+        $specialtyMax=(int)$base['sequences']['especialidades_id_especialidad_seq']['last_value'];
+        $where=' WHERE id_medico<='.$doctorMax.' AND id_especialidad<='.$specialtyMax;
+    }
     $value=hash('sha256',(string)$pdo->query('SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text COLLATE "C")::text,\'[]\') FROM (SELECT * FROM public."'.$table.'"'.$where.') t')->fetchColumn());
     if($value!==$hash){throw new RuntimeException('Filas heredadas distintas en '.$table);}
 }

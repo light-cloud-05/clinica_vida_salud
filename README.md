@@ -71,6 +71,11 @@ Git se inicializa localmente sin commits automáticos ni remoto. Antes de public
 
 ## Documentación y siguiente etapa
 
+La preparación para Render (Docker Web Service y PostgreSQL separado) está en
+[docs/render.md](docs/render.md). No se incluyen credenciales, dumps ni
+migraciones inventadas; la inicialización requiere un dump de demostración
+aislado y autorizado.
+
 Se extrajo texto OOXML de los dos DOCX de docs/requisitos y se revisaron las secciones relevantes de implementación, requisitos y actores. No se validaron diagramas/imágenes incrustados ni diseño visual. Una salida extensa de extracción se truncó; no se afirma revisión íntegra de todo su contenido. No hay scripts SQL independientes disponibles en la carpeta. Los nombres de entidades citados por el diseño no se toman como prueba del esquema instalado.
 
 La etapa de autenticación verificó el esquema real y RF01/CU01/CU02. El usuario confirmó posteriormente el acceso manual a los cuatro roles. P2 verificó RF05/CU04 y el esquema de pacientes, y reutiliza las cuentas existentes sin modificarlas. Abrir /pacientes con Administrador o Recepcionista con gestionar_pacientes. La escritura permanece deshabilitada; ver docs/pacientes.md para resultados reales, límites y acciones pendientes de autorización. No activar ni cambiar cuentas desde este módulo.
