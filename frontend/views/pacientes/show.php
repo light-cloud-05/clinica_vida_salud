@@ -1,0 +1,8 @@
+<div class="patient-page-heading"><div><span class="eyebrow text-secondary"><?= $escape($patient['codigo_paciente']) ?></span><h1><?= $escape($patient['nombres'].' '.$patient['apellidos']) ?></h1><span class="status-chip <?= $patient['estado']==='activo' ? 'is-active' : 'is-inactive' ?>"><?= $escape(ucfirst($patient['estado'])) ?></span></div><a class="btn btn-clinic" href="/pacientes/editar?id=<?= $escape($patient['id_paciente']) ?>">Editar paciente</a></div>
+<?php $groups=[
+    'Datos de identificación'=>['codigo_paciente'=>'Código de paciente','documento_identidad'=>'Documento de identidad','nombres'=>'Nombres','apellidos'=>'Apellidos','fecha_nacimiento'=>'Fecha de nacimiento','sexo'=>'Sexo'],
+    'Información de contacto'=>['telefono'=>'Teléfono','correo_contacto'=>'Correo de contacto','direccion'=>'Dirección'],
+    'Contacto de emergencia'=>['contacto_emergencia_nombre'=>'Nombre','contacto_emergencia_parentesco'=>'Parentesco','contacto_emergencia_telefono'=>'Teléfono'],
+]; ?>
+<?php foreach($groups as $heading=>$fields): ?><section class="patient-card patient-detail-section"><h2 class="h5"><?= $escape($heading) ?></h2><dl class="row mb-0"><?php foreach($fields as $field=>$label): ?><div class="col-md-6 mb-3"><dt><?= $escape($label) ?></dt><dd><?= $escape($patient[$field] ?: 'Sin registrar') ?></dd></div><?php endforeach; ?></dl></section><?php endforeach; ?>
+<section class="patient-card patient-detail-section"><h2 class="h5">Cuenta web vinculada</h2><p class="mb-0"><?= $escape($patient['cuenta_usuario'] ?: 'Sin cuenta web vinculada') ?></p></section><a class="back-link text-start mt-4" href="/pacientes">← Volver al listado</a>
