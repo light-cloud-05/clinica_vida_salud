@@ -6,6 +6,7 @@ use Clinica\Support\CitaFactory;
 use Clinica\Support\Input;
 use Clinica\Services\CitaFilters;
 use Clinica\Services\ScheduleValidator;
+use Clinica\Support\AttendanceFactory;
 final class CitaController
 {
     private function run(callable $action): void
@@ -27,7 +28,8 @@ final class CitaController
         $this->run(function()use($user): void{
             $id=Input::positiveId($_GET['id'] ?? null);if($id===null){throw new \InvalidArgumentException('Identificador de cita inválido.');}
             $appointment=CitaFactory::service()->find($user,$id);if(!$appointment){http_response_code(404);echo 'Cita no encontrada dentro de su ámbito.';return;}
-            $title='Detalle de la cita';$this->render('show',compact('user','title','appointment'));
+            $history=AttendanceFactory::reader()->history($user,$id);
+            $title='Detalle de la cita';$this->render('show',compact('user','title','appointment','history'));
         });
     }
     public function availability(array $user): void

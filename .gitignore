@@ -3,6 +3,7 @@
 !/.env.example
 /vendor/
 /var/
+/var/private-mail/
 *.log
 /.idea/
 /.vscode/

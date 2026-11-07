@@ -44,7 +44,15 @@ try {
             $fixtures['sessions'][$role]=['id'=>session_id(),'csrf'=>SessionService::csrf()];
             $citaRepo=new Clinica\Repositories\CitaRepository($pdo);
             $rows=$citaRepo->listing($identity,[],100,0);
-            $fixtures['appointments'][$role]=['total'=>$citaRepo->count($identity,[]),'ids'=>array_column($rows,'id_cita'),'sample'=>$rows ? array_intersect_key($rows[0],array_flip(['id_cita','codigo_cita','id_medico','id_paciente','id_especialidad','fecha','estado'])) : null];
+            $fixtures['appointments'][$role]=['total'=>$citaRepo->count($identity,[]),'ids'=>array_column($rows,'id_cita'),'codes'=>array_column($rows,'codigo_cita'),'sample'=>$rows ? array_intersect_key($rows[0],array_flip(['id_cita','codigo_cita','id_medico','id_paciente','id_especialidad','fecha','estado'])) : null];
+            if($role==='Paciente'){
+                $payRepo=new Clinica\Repositories\PaymentRepository($pdo);
+                $fixtures['payment_appointments']=[];
+                foreach($payRepo->candidates($identity) as $candidate){
+                    $c=$payRepo->appointment($identity,(int)$candidate['id_cita']);
+                    $fixtures['payment_appointments'][]=array_intersect_key($c,array_flip(['id_cita','fecha_registro','fecha','hora_inicio','hora_fin','precio_consulta','id_paciente']));
+                }
+            }
             if(in_array($role,['Medico','Paciente'],true)){
                 $alias=$role==='Medico' ? 'm' : 'p';
                 $stmt=$pdo->prepare('SELECT c.id_cita,c.id_paciente FROM public.citas c JOIN public.medicos m ON m.id_medico=c.id_medico JOIN public.pacientes p ON p.id_paciente=c.id_paciente WHERE '.$alias.'.id_usuario<>:id OR '.$alias.'.id_usuario IS NULL ORDER BY c.id_cita LIMIT 1');$stmt->execute(['id'=>$identity['id']]);$fixtures['appointments'][$role]['foreign']=$stmt->fetch();

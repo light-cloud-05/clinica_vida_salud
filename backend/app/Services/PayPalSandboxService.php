@@ -19,14 +19,15 @@ final class PayPalSandboxService
         if($oauth){$payload='grant_type=client_credentials';$headers[]='Content-Type: application/x-www-form-urlencoded';}
         else{$token=$this->request('POST','/v1/oauth2/token',null,null,true)['access_token'] ?? null;if(!is_string($token)){throw new BookingConflict('Sandbox no pudo autorizar la solicitud.');}$headers[]='Authorization: Bearer '.$token;$headers[]='Content-Type: application/json';if($body!==null){$payload=json_encode($body,JSON_THROW_ON_ERROR);}}
         if($requestId!==null){$headers[]='PayPal-Request-Id: '.$requestId;}
+        if(!extension_loaded('curl')){throw new BookingConflict('Sandbox requiere la extensión curl.');}
         $curl=curl_init(self::BASE.$path);$options=[CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>$headers,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>12,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS];
         if($payload!==null){$options[CURLOPT_POSTFIELDS]=$payload;}if($oauth){$options[CURLOPT_USERPWD]=$this->client.':'.$this->secret;}$options[CURLOPT_HTTPAUTH]=CURLAUTH_BASIC;curl_setopt_array($curl,$options);
         $raw=curl_exec($curl);$status=(int)curl_getinfo($curl,CURLINFO_HTTP_CODE);curl_close($curl);
         if(!is_string($raw) || $status<200 || $status>=300){throw new BookingConflict('Sandbox no confirmó la operación. Revise el estado antes de reintentar.');}return json_decode($raw,true,512,JSON_THROW_ON_ERROR);
     }
-    public function create(string $reference,string $bob,int $payment):array
+    public function create(string $reference,string $bob,int|string $payment):array
     {
-        $usd=$this->quote($bob);$order=$this->request('POST','/v2/checkout/orders',['intent'=>'CAPTURE','purchase_units'=>[['custom_id'=>$reference,'amount'=>['currency_code'=>'USD','value'=>$usd]]],'application_context'=>['return_url'=>$this->returnBase.'/pagos/sandbox/retorno?pago='.$payment,'cancel_url'=>$this->returnBase.'/pagos','shipping_preference'=>'NO_SHIPPING','user_action'=>'PAY_NOW']],substr(hash('sha256','create:'.$reference),0,32));
+        $usd=$this->quote($bob);$order=$this->request('POST','/v2/checkout/orders',['intent'=>'CAPTURE','purchase_units'=>[['custom_id'=>$reference,'amount'=>['currency_code'=>'USD','value'=>$usd]]],'application_context'=>['return_url'=>$this->returnBase.'/mis-pagos/sandbox/retorno?pago='.rawurlencode((string)$payment),'cancel_url'=>$this->returnBase.'/mis-pagos','shipping_preference'=>'NO_SHIPPING','user_action'=>'PAY_NOW']],substr(hash('sha256','create:'.$reference),0,32));
         $id=$order['id'] ?? '';if(!is_string($id) || !preg_match('/^[A-Z0-9]{5,40}$/D',$id)){throw new BookingConflict('Orden Sandbox inválida.');}
         $approve=null;foreach($order['links'] ?? [] as $link){$url=$link['href'] ?? '';if(in_array($link['rel'] ?? '',['approve','payer-action'],true) && parse_url($url,PHP_URL_SCHEME)==='https' && parse_url($url,PHP_URL_HOST)==='www.sandbox.paypal.com'){$approve=$url;}}
         if(!$approve){throw new BookingConflict('No se recibió aprobación Sandbox válida.');}return ['order'=>$id,'usd'=>$usd,'rate'=>$this->rate,'approve'=>$approve];
@@ -35,7 +36,11 @@ final class PayPalSandboxService
     {
         if(!preg_match('/^[A-Z0-9]{5,40}$/D',$order)){throw new \InvalidArgumentException('Orden inválida.');}
         $data=$this->request('GET','/v2/checkout/orders/'.$order);
-        if(($data['status'] ?? '')!=='COMPLETED'){$this->request('POST','/v2/checkout/orders/'.$order.'/capture',new \ArrayObject() instanceof \ArrayObject ? [] : [],substr(hash('sha256','capture:'.$reference),0,32));$data=$this->request('GET','/v2/checkout/orders/'.$order);}
+        if(($data['status'] ?? '')!=='COMPLETED'){
+            $units=$data['purchase_units'] ?? [];
+            if(($data['id'] ?? '')!==$order || ($data['status'] ?? '')!=='APPROVED' || count($units)!==1 || ($units[0]['custom_id'] ?? '')!==$reference || ($units[0]['amount']['currency_code'] ?? '')!=='USD' || PaymentPolicy::amount((string)($units[0]['amount']['value'] ?? ''))!==PaymentPolicy::amount($usd)){throw new BookingConflict('La orden no está aprobada o no coincide con el pago.');}
+        }
+        if(($data['status'] ?? '')!=='COMPLETED'){$this->request('POST','/v2/checkout/orders/'.$order.'/capture',null,substr(hash('sha256','capture:'.$reference),0,32));$data=$this->request('GET','/v2/checkout/orders/'.$order);}
         return self::verify($data,$order,$reference,$usd);
     }
     public static function verify(array $data,string $order,string $reference,string $usd):string

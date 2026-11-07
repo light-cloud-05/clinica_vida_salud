@@ -6,7 +6,7 @@ require dirname(__DIR__).'/backend/bootstrap.php';
 use Clinica\Repositories\Connection;
 use Clinica\Support\Environment;
 try{
-    foreach(['PATIENT_WRITES_ENABLED','MEDICAL_WRITES_ENABLED','SCHEDULE_WRITES_ENABLED','APPOINTMENT_WRITES_ENABLED','APPOINTMENT_CHANGES_ENABLED'] as $flag){
+    foreach(['PATIENT_WRITES_ENABLED','MEDICAL_WRITES_ENABLED','SCHEDULE_WRITES_ENABLED','APPOINTMENT_WRITES_ENABLED','APPOINTMENT_CHANGES_ENABLED','PAYMENT_WRITES_ENABLED'] as $flag){
         if(Environment::get($flag)==='true'){throw new RuntimeException('Hay un indicador de escritura habilitado. No se ejecutará la auditoría de cierre.');}
     }
     $mode=$argv[1] ?? '';

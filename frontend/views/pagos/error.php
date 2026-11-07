@@ -1,0 +1,1 @@
+<div class="alert alert-danger" role="alert"><h1 class="h4"><?= $escape($title) ?></h1><p class="mb-3"><?= $escape($message) ?></p><a class="btn btn-outline-secondary" href="<?= $escape($base) ?>">Volver a pagos</a></div>

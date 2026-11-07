@@ -7,6 +7,7 @@ use Clinica\Services\AuthService;
 use Clinica\Services\SessionService;
 use Clinica\Services\LoginThrottle;
 use Clinica\Support\AuthFactory;
+use Clinica\Support\PatientAccountFactory;
 
 final class AuthController
 {
@@ -61,5 +62,38 @@ final class AuthController
         }
         SessionService::logout();
         header('Location: /login?salida=1', true, 303);
+    }
+
+    public function registerForm(): void
+    {
+        SessionService::start();
+        $values = []; $errors = []; $success = null;
+        require dirname(__DIR__, 3) . '/frontend/views/auth/register.php';
+    }
+
+    public function register(): void
+    {
+        SessionService::start();
+        if (!SessionService::validCsrf($_POST['csrf'] ?? null)) { http_response_code(419); echo 'El formulario venció.'; return; }
+        $values = $_POST; $errors = []; $success = null;
+        if (!PatientAccountFactory::writesEnabled()) {
+            http_response_code(423);
+            $errors['_form'] = 'El registro está temporalmente deshabilitado mientras se valida el entorno.';
+        } else {
+            try {
+                PatientAccountFactory::service(true)->register($_POST);
+                $success = 'La solicitud fue registrada. Ya puede iniciar sesión cuando la cuenta sea habilitada.';
+                $values = [];
+            } catch (\Clinica\Services\PatientValidation $e) { http_response_code(422); $errors = $e->errors; }
+            catch (\Throwable $e) { http_response_code(503); $errors['_form'] = 'No se pudo completar el registro. No se confirmaron cambios.'; }
+        }
+        require dirname(__DIR__, 3) . '/frontend/views/auth/register.php';
+    }
+
+    public function recoveryForm(): void
+    {
+        SessionService::start();
+        $errors = []; $message = null;
+        require dirname(__DIR__, 3) . '/frontend/views/auth/recovery.php';
     }
 }

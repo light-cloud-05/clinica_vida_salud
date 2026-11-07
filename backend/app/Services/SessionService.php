@@ -7,7 +7,8 @@ final class SessionService
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) { return; }
-        $path = dirname(__DIR__, 3) . '/var/sessions';
+        $integration=\Clinica\Support\IntegrationGuard::active();
+        $path = dirname(__DIR__, 3) . ($integration ? '/var/integration/sessions' : '/var/sessions');
         if (!is_dir($path) && !mkdir($path, 0700, true) && !is_dir($path)) {
             throw new \RuntimeException('Sesiones no disponibles.');
         }
@@ -16,7 +17,7 @@ final class SessionService
         ini_set('session.use_trans_sid', '0');
         ini_set('session.gc_maxlifetime', '28800');
         session_save_path($path);
-        session_name('CVS_SESSION');
+        session_name($integration ? 'CVS_TEST_SESSION' : 'CVS_SESSION');
         session_set_cookie_params(['lifetime'=>0, 'path'=>'/', 'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly'=>true, 'samesite'=>'Lax']);
         if (!session_start()) { throw new \RuntimeException('Sesiones no disponibles.'); }
     }

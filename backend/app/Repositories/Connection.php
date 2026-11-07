@@ -68,6 +68,14 @@ final class Connection
         if($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}
         return $pdo;
     }
+    public static function medicalRecordManagement(array $config): PDO
+    {
+        if(\Clinica\Support\Environment::get('MEDICAL_RECORD_WRITES_ENABLED')!=='true'){throw new \RuntimeException('Las escrituras clínicas están deshabilitadas.');}
+        $pdo=self::connect($config,false);
+        if(\Clinica\Support\IntegrationGuard::active()){\Clinica\Support\IntegrationGuard::check($pdo);}
+        elseif($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}
+        return $pdo;
+    }
     public static function scheduleManagement(array $config): PDO
     {
         if(\Clinica\Support\Environment::get('SCHEDULE_WRITES_ENABLED')!=='true'){throw new \RuntimeException('El guardado P4 no está habilitado.');}
@@ -76,11 +84,84 @@ final class Connection
     public static function appointmentChanges(array $config): PDO
     {
         if(\Clinica\Support\Environment::get('APPOINTMENT_CHANGES_ENABLED')!=='true'){throw new \RuntimeException('Los cambios de citas están deshabilitados.');}
-        $pdo=self::connect($config,false);if($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}return $pdo;
+        $pdo=self::connect($config,false);if(\Clinica\Support\IntegrationGuard::active()){\Clinica\Support\IntegrationGuard::check($pdo);}elseif($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}return $pdo;
     }
     public static function appointmentCreation(array $config): PDO
     {
         if(\Clinica\Support\Environment::get('APPOINTMENT_WRITES_ENABLED')!=='true'){throw new \RuntimeException('Las reservas persistentes están deshabilitadas.');}
-        $pdo=self::connect($config,false);if($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}return $pdo;
+        $pdo=self::connect($config,false);if(\Clinica\Support\IntegrationGuard::active()){\Clinica\Support\IntegrationGuard::check($pdo);}elseif($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}return $pdo;
+    }
+    public static function appointmentAttendance(array $config): PDO
+    {
+        if(\Clinica\Support\Environment::get('ATTENDANCE_WRITES_ENABLED')!=='true'){throw new \RuntimeException('Las escrituras de asistencia están deshabilitadas.');}
+        $pdo=self::connect($config,false);
+        if(\Clinica\Support\IntegrationGuard::active()){\Clinica\Support\IntegrationGuard::check($pdo);}
+        elseif($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}
+        return $pdo;
+    }
+
+    public static function notificationManagement(array $config): PDO
+    {
+        if (\Clinica\Support\Environment::get('NOTIFICATION_WRITES_ENABLED') !== 'true') {
+            throw new \RuntimeException('Las escrituras de notificaciones están deshabilitadas.');
+        }
+        $pdo = self::connect($config, false);
+        if (\Clinica\Support\IntegrationGuard::active()) {
+            \Clinica\Support\IntegrationGuard::check($pdo);
+        } elseif ($pdo->query('SELECT current_database()')->fetchColumn() !== 'clinica_vida_salud') {
+            throw new \RuntimeException('Base no autorizada.');
+        }
+        return $pdo;
+    }
+    public static function integration(array $config):PDO
+    {
+        $pdo=self::connect($config,false);\Clinica\Support\IntegrationGuard::check($pdo);return $pdo;
+    }
+
+    public static function userManagement(array $config): PDO
+    {
+        if (\Clinica\Support\Environment::get('USER_WRITES_ENABLED') !== 'true') {
+            throw new \RuntimeException('La administración de usuarios está bloqueada.');
+        }
+        $pdo = self::connect($config, false);
+        if ($pdo->query('SELECT current_database()')->fetchColumn() !== 'clinica_vida_salud') {
+            throw new \RuntimeException('Base no autorizada.');
+        }
+        return $pdo;
+    }
+
+    public static function patientAccount(array $config): PDO
+    {
+        if (\Clinica\Support\Environment::get('PATIENT_ACCOUNT_WRITES_ENABLED') !== 'true') {
+            throw new \RuntimeException('El registro de cuentas está deshabilitado.');
+        }
+        return self::protectedWrite($config);
+    }
+
+    public static function passwordRecovery(array $config): PDO
+    {
+        if (\Clinica\Support\Environment::get('PASSWORD_RECOVERY_WRITES_ENABLED') !== 'true') {
+            throw new \RuntimeException('La recuperación de contraseña está deshabilitada.');
+        }
+        return self::protectedWrite($config);
+    }
+
+    public static function patientProfile(array $config): PDO
+    {
+        if (\Clinica\Support\Environment::get('PATIENT_PROFILE_WRITES_ENABLED') !== 'true') {
+            throw new \RuntimeException('La edición del perfil está deshabilitada.');
+        }
+        return self::protectedWrite($config);
+    }
+
+    private static function protectedWrite(array $config): PDO
+    {
+        $pdo = self::connect($config, false);
+        if (\Clinica\Support\IntegrationGuard::active()) {
+            \Clinica\Support\IntegrationGuard::check($pdo);
+        } elseif ($pdo->query('SELECT current_database()')->fetchColumn() !== 'clinica_vida_salud') {
+            throw new \RuntimeException('Base no autorizada.');
+        }
+        return $pdo;
     }
 }

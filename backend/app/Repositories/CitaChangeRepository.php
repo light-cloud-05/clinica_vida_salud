@@ -5,7 +5,7 @@ use Clinica\Middleware\BookingAccess;
 use Clinica\Services\{BookingConflict,CitaChangePolicy,CitaAvailability};
 final class CitaChangeRepository implements CitaChangeStore
 {
-    public function __construct(private \PDO $pdo){}
+    public function __construct(private \PDO $pdo, private ?\Clinica\Services\NotificationService $notifications = null){}
     public function find(array $actor,int $id,bool $lock=false):?array
     {
         if($id<1 || ($actor['id'] ?? 0)<1 || !BookingAccess::allowed($actor)){throw new \DomainException('Consulta no autorizada.');}
@@ -28,6 +28,7 @@ final class CitaChangeRepository implements CitaChangeStore
     public function change(array $actor,string $action,array $input):int
     {
         if(!in_array($action,['reprogramar','cancelar'],true)){throw new \InvalidArgumentException('Operación inválida.');}
+        if(\Clinica\Support\IntegrationGuard::active()){\Clinica\Support\IntegrationGuard::check($this->pdo,(int)$input['id']);}
         $this->pdo->beginTransaction();
         try{
             $this->pdo->exec("SET LOCAL lock_timeout = '3s'");
@@ -54,7 +55,15 @@ final class CitaChangeRepository implements CitaChangeStore
                 $stmt=$this->pdo->prepare('UPDATE public.citas SET fecha=:date,hora_inicio=:start,hora_fin=:end WHERE id_cita=:id');
                 $stmt->execute(['date'=>$input['fecha'],'start'=>$slot['hora_inicio'],'end'=>$slot['hora_fin'],'id'=>$c['id_cita']]);
             }
-            $this->pdo->commit();return (int)$c['id_cita'];
+            $this->pdo->commit();
+            if ($this->notifications !== null) {
+                try {
+                    $this->notifications->appointment((int)$c['id_cita'], $action === 'reprogramar' ? 'reprogramacion_cita' : 'cancelacion_cita');
+                } catch (\RuntimeException $e) {
+                    error_log('No se pudo crear la notificación de cambio: '.get_class($e));
+                }
+            }
+            return (int)$c['id_cita'];
         }catch(\Throwable $e){
             if($this->pdo->inTransaction()){$this->pdo->rollBack();}
             if($e instanceof \PDOException && in_array($e->getCode(),['23P01','23505','23503','23514','P0001','55P03','40P01','40001','57014'],true)){throw new BookingConflict('El turno cambió o la operación incumple una restricción. Consulte la cita nuevamente.');}

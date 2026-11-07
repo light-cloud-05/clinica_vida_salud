@@ -27,7 +27,7 @@ $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTE
             <div class="mb-4"><label for="password" class="form-label">Contraseña</label><div class="password-field"><input id="password" name="password" type="password" class="form-control form-control-lg" autocomplete="current-password" required aria-describedby="password-help"><button type="button" class="password-toggle" data-toggle-password="password" aria-controls="password" aria-pressed="false">Mostrar</button></div><small id="password-help" class="text-secondary">Usa tu contraseña personal. No la compartas.</small></div>
             <button type="submit" class="btn btn-clinic btn-lg w-100">Entrar a mi cuenta <span aria-hidden="true">→</span></button>
         </form>
-        <p class="login-support">¿Necesitas ayuda para acceder?<br>Comunícate con la administración de la clínica.</p><a href="/" class="back-link">← Volver al inicio</a>
+        <p class="mt-3"><a href="/recuperar-contrasena">¿Olvidaste tu contraseña?</a> · <a href="/registro">Crear cuenta</a></p><p class="login-support">¿Necesitas ayuda para acceder?<br>Comunícate con la administración de la clínica.</p><a href="/" class="back-link">← Volver al inicio</a>
         </div>
     </section>
 </main>

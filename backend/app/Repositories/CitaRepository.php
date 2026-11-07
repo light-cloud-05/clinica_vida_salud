@@ -5,7 +5,7 @@ use Clinica\Middleware\CitaAccess;
 final class CitaRepository implements CitaStore
 {
     private const JOINS=' FROM public.citas c JOIN public.pacientes p ON p.id_paciente=c.id_paciente JOIN public.medicos m ON m.id_medico=c.id_medico JOIN public.especialidades e ON e.id_especialidad=c.id_especialidad';
-    private const COLUMNS="c.id_cita,c.codigo_cita,c.id_paciente,c.id_medico,c.id_especialidad,c.fecha,c.hora_inicio,c.hora_fin,c.estado,p.nombres||' '||p.apellidos AS paciente_nombre,m.nombres||' '||m.apellidos AS medico_nombre,e.nombre AS especialidad_nombre";
+    private const COLUMNS="c.id_cita,c.codigo_cita,c.id_paciente,c.id_medico,c.id_especialidad,c.fecha,c.hora_inicio,c.hora_fin,c.estado,c.cantidad_reprogramaciones,c.updated_at,p.nombres||' '||p.apellidos AS paciente_nombre,m.nombres||' '||m.apellidos AS medico_nombre,e.nombre AS especialidad_nombre";
     public function __construct(private \PDO $pdo){}
     private function guard(array $actor,bool $availability=false): void
     {

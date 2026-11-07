@@ -6,15 +6,18 @@ use Clinica\Middleware\PaymentAccess;
 use Clinica\Support\Environment;
 final class PaymentWriteRepository
 {
-    public function __construct(private \PDO $pdo,private PayPalSandboxService $paypal){}
+    public function __construct(private \PDO $pdo,private PayPalSandboxService $paypal,private ?\Closure $testClock=null){}
     private function run(array $actor,int $appointment,callable $work):mixed
     {
+        if(Environment::get('PAYMENT_WRITES_ENABLED')!=='true'){throw new \RuntimeException('Las escrituras persistentes de pagos están deshabilitadas.');}
+        if(\Clinica\Support\IntegrationGuard::active()){\Clinica\Support\IntegrationGuard::check($this->pdo,$appointment);}
         if(!in_array((string)$appointment,explode(',',Environment::get('PAYMENT_ALLOWED_APPOINTMENTS','')),true)){throw new \DomainException('Esta cita no está autorizada para la prueba persistente.');}
         $this->pdo->beginTransaction();
         try{
             $this->pdo->exec("SET LOCAL lock_timeout='3s'");$c=(new PaymentRepository($this->pdo))->appointment($actor,$appointment,true);if(!$c){throw new \DomainException('Cita fuera de su ámbito.');}
             $this->sql("SELECT set_config('app.usuario_id',:actor,true)",['actor'=>(string)$actor['id']]);
             $now=new \DateTimeImmutable($this->pdo->query('SELECT clock_timestamp()::text')->fetchColumn());
+            if($this->testClock){\Clinica\Support\IntegrationGuard::check($this->pdo,$appointment);$now=($this->testClock)();}
             $result=$work($c,$now);$this->pdo->commit();return $result;
         }catch(\Throwable $e){if($this->pdo->inTransaction()){$this->pdo->rollBack();}if($e instanceof \PDOException){throw new BookingConflict('La operación cambió o no pudo guardarse. Revise el pago antes de reintentar.');}throw $e;}
     }
@@ -23,7 +26,9 @@ final class PaymentWriteRepository
     {
         if(!isset(PaymentPolicy::METHODS[$method]) || !in_array($mode,['demo','sandbox'],true)){throw new \InvalidArgumentException('Método o modo inválido.');}
         if($method==='efectivo' ? !(PaymentAccess::pay($actor) || PaymentAccess::cash($actor)) : !PaymentAccess::pay($actor)){throw new \DomainException('Inicio de pago no autorizado.');}
-        if(($mode==='sandbox')!==($method==='paypal_sandbox')){throw new BookingConflict('El PayPal persistente exige Sandbox auténtico; use el simulador para ensayo local.');}
+        $integration=\Clinica\Support\IntegrationGuard::active();
+        if($integration && $mode==='sandbox'){throw new BookingConflict('La integración aislada solo admite simulaciones, sin llamadas al proveedor.');}
+        if(!$integration && ($mode==='sandbox')!==($method==='paypal_sandbox')){throw new BookingConflict('El PayPal persistente exige Sandbox auténtico; use el simulador para ensayo local.');}
         return $this->run($actor,$appointment,function(array $c,\DateTimeImmutable $now)use($actor,$method,$mode):int{
             if($c['estado']!=='programada'){throw new BookingConflict('La cita no admite iniciar un pago.');}
             $existing=$this->sql('SELECT id_pago,metodo FROM public.pagos WHERE id_cita=:id FOR UPDATE',['id'=>$c['id_cita']])->fetchAll();
@@ -37,6 +42,7 @@ final class PaymentWriteRepository
             $amount=PaymentPolicy::amount($c['precio_consulta']);$reference='P9-'.strtoupper(bin2hex(random_bytes(16)));
             $this->sql("INSERT INTO public.reservas_provisionales(id_cita,fecha_creacion,fecha_vencimiento,estado) VALUES(:id,:created,:expiry,'pendiente')",['id'=>$c['id_cita'],'created'=>$created->format(DATE_ATOM),'expiry'=>$expiry->format(DATE_ATOM)]);
             $id=(int)$this->sql("INSERT INTO public.pagos(id_cita,id_usuario_registro,importe,moneda,metodo,estado,referencia) VALUES(:id,:actor,:amount,'BOB',:method,'pendiente',:ref) RETURNING id_pago",['id'=>$c['id_cita'],'actor'=>$actor['id'],'amount'=>$amount,'method'=>$method,'ref'=>$reference])->fetchColumn();
+            if(\Clinica\Support\IntegrationGuard::active() && $method==='paypal_sandbox'){$this->sql("INSERT INTO public.transacciones_pago(id_pago,proveedor,referencia_externa,estado,detalles) VALUES(:id,'paypal_simulacion_local',:ref,'CREATED',CAST(:details AS jsonb))",['id'=>$id,'ref'=>'SIM-'.$reference,'details'=>json_encode(['simulacion'=>true,'entorno'=>'copia_aislada'])]);}
             if($mode==='sandbox'){$order=$this->paypal->create($reference,$amount,$id);$this->sql("INSERT INTO public.transacciones_pago(id_pago,proveedor,referencia_externa,estado,detalles) VALUES(:id,'paypal_sandbox',:ref,'CREATED',CAST(:details AS jsonb))",['id'=>$id,'ref'=>$order['order'],'details'=>json_encode($order,JSON_THROW_ON_ERROR)]);}
             return $id;
         });
@@ -48,22 +54,40 @@ final class PaymentWriteRepository
             if($p['metodo']==='efectivo' ? !PaymentAccess::cash($actor) : !PaymentAccess::pay($actor)){throw new \DomainException('Confirmación no autorizada.');}
             if($p['estado']==='confirmado'){return true;}
             $r=$this->sql('SELECT * FROM public.reservas_provisionales WHERE id_cita=:id FOR UPDATE',['id'=>$c['id_cita']])->fetch();
-            if(!$r || $r['estado']!=='pendiente' || $c['estado']!=='programada' || !in_array($p['estado'],['pendiente','rechazado'],true)){throw new BookingConflict('Reserva o pago incompatibles.');}
+            if(!$r || $r['estado']!=='pendiente' || $c['estado']!=='programada' || $p['estado']!=='pendiente'){throw new BookingConflict('Reserva o pago incompatibles.');}
             if(new \DateTimeImmutable($r['fecha_vencimiento'])<=$now){
-                $this->sql('CALL public.cancelar_cita(CAST(:id AS bigint),:reason)',['id'=>$c['id_cita'],'reason'=>'Reserva vencida por falta de pago']);$this->sql("UPDATE public.reservas_provisionales SET estado='expirada' WHERE id_reserva=:id",['id'=>$r['id_reserva']]);return false;
+                $this->sql('CALL public.cancelar_cita(CAST(:id AS bigint),:reason)',['id'=>$c['id_cita'],'reason'=>'Reserva vencida por falta de pago']);$this->sql("UPDATE public.reservas_provisionales SET estado='expirada' WHERE id_reserva=:id",['id'=>$r['id_reserva']]);$this->sql("UPDATE public.pagos SET estado='cancelado' WHERE id_pago=:id",['id'=>$payment]);return false;
             }
             if(new \DateTimeImmutable($c['fecha'].' '.$c['hora_inicio'],new \DateTimeZone('America/La_Paz'))<=$now){throw new BookingConflict('La cita ya no es futura.');}
             if($p['metodo']==='efectivo' && !PaymentPolicy::cashOpen($now)){throw new BookingConflict('Caja cerrada.');}
             $external='SIM-'.bin2hex(random_bytes(12));$provider=$p['metodo']==='efectivo' ? 'efectivo_simulado' : 'qr_simulado';
             if($p['metodo']==='paypal_sandbox'){
+                if(\Clinica\Support\IntegrationGuard::active()){
+                    if(!$this->sql("SELECT id_transaccion FROM public.transacciones_pago WHERE id_pago=:id AND proveedor='paypal_simulacion_local' AND estado='CREATED'",['id'=>$payment])->fetchColumn()){throw new BookingConflict('No existe un intento explícito de simulación local.');}
+                    $provider='paypal_simulacion_local';
+                }else{
                 if(new \DateTimeImmutable($r['fecha_vencimiento'])<$now->modify('+45 seconds')){throw new BookingConflict('No queda margen para verificar Sandbox antes del vencimiento.');}
                 $t=$this->sql("SELECT referencia_externa,detalles FROM public.transacciones_pago WHERE id_pago=:id AND proveedor='paypal_sandbox' AND estado='CREATED' ORDER BY id_transaccion LIMIT 1",['id'=>$payment])->fetch();if(!$t){throw new BookingConflict('Falta la orden Sandbox registrada.');}$details=json_decode($t['detalles'],true,512,JSON_THROW_ON_ERROR);
                 $external=$this->paypal->capture($t['referencia_externa'],$p['referencia'],$details['usd']);$provider='paypal_sandbox';
+                }
             }
             $this->sql("UPDATE public.pagos SET estado='confirmado',fecha_confirmacion=clock_timestamp(),id_usuario_registro=:actor WHERE id_pago=:id",['actor'=>$actor['id'],'id'=>$payment]);
             $this->sql("UPDATE public.reservas_provisionales SET estado='confirmada' WHERE id_reserva=:id",['id'=>$r['id_reserva']]);$this->sql("UPDATE public.citas SET estado='confirmada' WHERE id_cita=:id",['id'=>$c['id_cita']]);
-            $this->sql("INSERT INTO public.transacciones_pago(id_pago,proveedor,referencia_externa,estado,detalles) VALUES(:id,:provider,:external,'COMPLETED',CAST(:details AS jsonb))",['id'=>$payment,'provider'=>$provider,'external'=>$external,'details'=>json_encode(['simulacion'=>$provider!=='paypal_sandbox'],JSON_THROW_ON_ERROR)]);
+            $this->sql("INSERT INTO public.transacciones_pago(id_pago,proveedor,referencia_externa,estado,detalles) VALUES(:id,:provider,:external,'COMPLETED',CAST(:details AS jsonb))",['id'=>$payment,'provider'=>$provider,'external'=>$external,'details'=>json_encode(['simulacion'=>$provider!=='paypal_sandbox','reloj_negocio_ensayo'=>$this->testClock ? $now->format(DATE_ATOM) : null],JSON_THROW_ON_ERROR)]);
             $this->sql('INSERT INTO public.comprobantes_pago(id_pago,numero_comprobante) VALUES(:id,:number) ON CONFLICT(id_pago) DO NOTHING',['id'=>$payment,'number'=>'ACA-'.strtoupper(bin2hex(random_bytes(16)))]);return true;
+        });
+    }
+    public function reject(array $actor,int $appointment,int $payment):void
+    {
+        \Clinica\Support\IntegrationGuard::check($this->pdo,$appointment);
+        $this->run($actor,$appointment,function(array $c,\DateTimeImmutable $now)use($actor,$payment):void{
+            $p=$this->sql('SELECT * FROM public.pagos WHERE id_pago=:id AND id_cita=:cita FOR UPDATE',['id'=>$payment,'cita'=>$c['id_cita']])->fetch();
+            if(!$p || ($p['metodo']==='efectivo' ? !PaymentAccess::cash($actor) : !PaymentAccess::pay($actor))){throw new \DomainException('Rechazo no autorizado.');}
+            if($p['estado']==='rechazado'){return;}
+            if($p['estado']!=='pendiente'){throw new BookingConflict('Solo puede rechazarse un intento pendiente.');}
+            $this->sql("UPDATE public.pagos SET estado='rechazado' WHERE id_pago=:id",['id'=>$payment]);
+            $this->sql('CALL public.cancelar_cita(CAST(:id AS bigint),CAST(:reason AS text))',['id'=>$c['id_cita'],'reason'=>'Pago simulado rechazado en entorno aislado']);
+            $this->sql("INSERT INTO public.transacciones_pago(id_pago,proveedor,referencia_externa,estado,detalles) VALUES(:id,:provider,:ref,'REJECTED',CAST(:details AS jsonb))",['id'=>$payment,'provider'=>$p['metodo']==='paypal_sandbox' ? 'paypal_simulacion_local' : $p['metodo'],'ref'=>'SIM-'.bin2hex(random_bytes(12)),'details'=>json_encode(['simulacion'=>true])]);
         });
     }
 }
