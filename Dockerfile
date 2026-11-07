@@ -1,10 +1,3 @@
-FROM composer:2.8 AS dependencies
-
-WORKDIR /app
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader \
-    --ignore-platform-req=ext-pdo_pgsql --ignore-platform-req=ext-pgsql
-
 FROM php:8.3-apache
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
@@ -17,9 +10,12 @@ RUN apt-get update \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=composer:2.8 /usr/bin/composer /usr/local/bin/composer
+
 WORKDIR /var/www/html
-COPY --from=dependencies /app/vendor ./vendor
 COPY . .
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader \
+    && composer check-platform-reqs --no-dev
 COPY docker/apache-vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/entrypoint.sh /usr/local/bin/clinica-entrypoint
 RUN chmod 755 /usr/local/bin/clinica-entrypoint \
