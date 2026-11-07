@@ -134,7 +134,7 @@ El catálogo actual no permite probar persistencia de bloqueos, estados mixtos, 
 
 El formulario admite seleccionar médico y especialidad del catálogo; PHP rechaza una pareja no asociada con un mensaje 400. No se creó una relación nueva para resolverla. No hay endpoint anónimo de disponibilidad, exportación, historial de cambios detallado, recordatorios, confirmación ni acciones de cobro.
 
-P5-B (creación), P5-C (reprogramación/cancelación) y P9 (pagos) siguen pendientes de autorización y desarrollo. Ninguna bandera de escritura anterior se habilitó. No existe una bandera que permita convertir las consultas de P5-A en escrituras: CitaRepository/CitaService no tienen método save y su fábrica solo utiliza Connection::readOnly.
+Actualización P5-B: la creación está implementada mediante un repositorio independiente, con escrituras deshabilitadas. Ver [reservas.md](reservas.md) para rutas, pruebas y habilitación controlada. P5-C (reprogramación/cancelación) y P9 (pagos) siguen pendientes de desarrollo. Ninguna bandera de escritura anterior se habilitó. No existe una bandera que permita convertir las consultas de P5-A en escrituras: CitaRepository/CitaService no tienen método save y su fábrica solo utiliza Connection::readOnly.
 
 ## Archivos de esta entrega
 
@@ -153,3 +153,7 @@ Creados:
 Modificados: AGENTS.md (alcance P5-A autorizado), backend/routes/web.php, frontend/views/layouts/management-header.php, frontend/views/dashboard.php, frontend/assets/css/app.css y public/assets/css/app.css, composer.json (scripts de prueba), tests/support/patient-http-fixtures.php (metadatos privados de citas para las pruebas), tools/verify-p4-integrity.php (etiqueta de línea base opcional), README.md y nota de continuidad de docs/horarios.md.
 
 No se alteraron .env, credenciales, permisos, datos, auditoría, secuencias, restricciones, funciones o triggers. El motor de disponibilidad y las operaciones existentes de P2/P3/P4 se conservaron.
+
+## P5-C: reprogramación y cancelación
+
+Implementadas mediante rutas y servicios independientes, reutilizando P5-A/P5-B. Guardado deshabilitado por APPOINTMENT_CHANGES_ENABLED=false. Ver [cambios-citas.md](cambios-citas.md) para reglas, permisos, resultados y propuesta de prueba aislada. Las notas anteriores de alcance P5-A son históricas; P9 sigue pendiente.

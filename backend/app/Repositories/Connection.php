@@ -73,4 +73,14 @@ final class Connection
         if(\Clinica\Support\Environment::get('SCHEDULE_WRITES_ENABLED')!=='true'){throw new \RuntimeException('El guardado P4 no está habilitado.');}
         $pdo=self::connect($config,false);if($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}return $pdo;
     }
+    public static function appointmentChanges(array $config): PDO
+    {
+        if(\Clinica\Support\Environment::get('APPOINTMENT_CHANGES_ENABLED')!=='true'){throw new \RuntimeException('Los cambios de citas están deshabilitados.');}
+        $pdo=self::connect($config,false);if($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}return $pdo;
+    }
+    public static function appointmentCreation(array $config): PDO
+    {
+        if(\Clinica\Support\Environment::get('APPOINTMENT_WRITES_ENABLED')!=='true'){throw new \RuntimeException('Las reservas persistentes están deshabilitadas.');}
+        $pdo=self::connect($config,false);if($pdo->query('SELECT current_database()')->fetchColumn()!=='clinica_vida_salud'){throw new \RuntimeException('Base no autorizada.');}return $pdo;
+    }
 }

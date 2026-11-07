@@ -1,0 +1,32 @@
+<?php
+declare(strict_types=1);
+require dirname(__DIR__).'/backend/bootstrap.php';
+use Clinica\Middleware\BookingAccess;
+use Clinica\Services\{BookingInput,BookingIntent,BookingConflict,ReservaService};
+use Clinica\Repositories\BookingStore;
+$checks=0;
+$check=static function(bool $ok)use(&$checks):void{if(!$ok){throw new RuntimeException('Fallo P5-B.');}++$checks;};
+$reject=static function(callable $work,string $type)use($check):void{try{$work();$check(false);}catch(Throwable $e){$check($e instanceof $type);}};
+$patient=['id'=>22,'role'=>'Paciente','permissions'=>['gestionar_citas_propias']];
+$reception=['id'=>2,'role'=>'Recepcionista','permissions'=>['consultar_agenda','consultar_historial_citas','gestionar_citas']];
+$input=['medico'=>'1','especialidad'=>'1','fecha'=>'2026-11-09','hora'=>'10:00'];
+$check(BookingAccess::allowed($patient));$check(BookingAccess::allowed($reception));
+$check(!BookingAccess::allowed(['id'=>3,'role'=>'Medico','permissions'=>['consultar_agenda']]));
+$check(!BookingAccess::allowed(['id'=>2,'role'=>'Recepcionista','permissions'=>['consultar_agenda']]));
+$normalized=BookingInput::parse($patient,$input);$check($normalized['paciente']===null && $normalized['hora']==='10:00:00');
+$check(BookingInput::parse($reception,$input+['paciente'=>'3'])['paciente']===3);
+$reject(fn()=>BookingInput::parse($patient,$input+['paciente'=>'3']),DomainException::class);
+$reject(fn()=>BookingInput::parse($reception,$input),InvalidArgumentException::class);
+foreach(['medico'=>['1'],'especialidad'=>'0','fecha'=>'2026-02-30','hora'=>'25:00','hora_fin'=>'11:00','estado'=>'confirmada'] as $key=>$value){$bad=$input;$bad[$key]=$value;$reject(fn()=>BookingInput::parse($patient,$bad),InvalidArgumentException::class);}
+$_SESSION=[];$token=BookingIntent::issue($normalized);$check(strlen($token)===64);$check(BookingIntent::check($token,$normalized)===null);
+$bad=$normalized;$bad['hora']='11:00:00';$reject(fn()=>BookingIntent::check($token,$bad),BookingConflict::class);
+BookingIntent::complete($token,$normalized,123);$check(BookingIntent::check($token,$normalized)===123);
+$bad=$normalized;$bad['paciente']=99;$reject(fn()=>BookingIntent::check($token,$bad),BookingConflict::class);
+$_SESSION['booking_intents'][$token]['expires']=time()-1;$reject(fn()=>BookingIntent::check($token,$normalized),BookingConflict::class);
+$reject(fn()=>BookingIntent::check([], $normalized),BookingConflict::class);
+for($i=0;$i<25;++$i){BookingIntent::issue($normalized);}$check(count($_SESSION['booking_intents'])===20);
+$store=new class implements BookingStore{public int $calls=0;public array $received=[];public function create(array $actor,array $input):array{++$this->calls;$this->received=$input;return ['id'=>123,'code'=>'SIMULADO'];}};
+$reject(fn()=>(new ReservaService($store))->reserve($patient,$input),RuntimeException::class);$check($store->calls===0);
+$check((new ReservaService($store,true))->reserve($patient,$input)['id']===123);$check($store->calls===1 && $store->received['paciente']===null);
+$reject(fn()=>(new ReservaService($store,true))->reserve($patient,$input+['paciente'=>'99']),DomainException::class);$check($store->calls===1);
+echo "$checks comprobaciones P5-B pasaron con datos simulados; sin conexión ni escritura en PostgreSQL.\n";

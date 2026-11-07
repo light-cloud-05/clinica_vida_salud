@@ -36,4 +36,12 @@ return [
     '/mis-citas' => ['GET'=>[\Clinica\Controllers\CitaController::class,'index'],'role'=>'Paciente','permission'=>'gestionar_citas_propias'],
     '/mis-citas/detalle' => ['GET'=>[\Clinica\Controllers\CitaController::class,'show'],'role'=>'Paciente','permission'=>'gestionar_citas_propias'],
     '/mis-citas/disponibilidad' => ['GET'=>[\Clinica\Controllers\CitaController::class,'availability'],'role'=>'Paciente','permission'=>'gestionar_citas_propias'],
+    '/mis-citas/reservar' => ['GET'=>[\Clinica\Controllers\ReservaController::class,'form'],'POST'=>[\Clinica\Controllers\ReservaController::class,'store'],'role'=>'Paciente','permission'=>'gestionar_citas_propias'],
+    '/mis-citas/confirmacion' => ['GET'=>[\Clinica\Controllers\ReservaController::class,'confirmation'],'role'=>'Paciente','permission'=>'gestionar_citas_propias'],
+    '/citas/reservar' => ['GET'=>[\Clinica\Controllers\ReservaController::class,'form'],'POST'=>[\Clinica\Controllers\ReservaController::class,'store'],'roles'=>['Administrador','Recepcionista'],'permission'=>'gestionar_citas'],
+    '/citas/confirmacion' => ['GET'=>[\Clinica\Controllers\ReservaController::class,'confirmation'],'roles'=>['Administrador','Recepcionista'],'permission'=>'gestionar_citas'],
+    '/mis-citas/reprogramar' => ['GET'=>[\Clinica\Controllers\CitaChangeController::class,'rescheduleForm'],'POST'=>[\Clinica\Controllers\CitaChangeController::class,'reschedule'],'role'=>'Paciente','permission'=>'gestionar_citas_propias'],
+    '/mis-citas/cancelar' => ['GET'=>[\Clinica\Controllers\CitaChangeController::class,'cancelForm'],'POST'=>[\Clinica\Controllers\CitaChangeController::class,'cancel'],'role'=>'Paciente','permission'=>'gestionar_citas_propias'],
+    '/citas/reprogramar' => ['GET'=>[\Clinica\Controllers\CitaChangeController::class,'rescheduleForm'],'POST'=>[\Clinica\Controllers\CitaChangeController::class,'reschedule'],'roles'=>['Administrador','Recepcionista'],'permission'=>'gestionar_citas'],
+    '/citas/cancelar' => ['GET'=>[\Clinica\Controllers\CitaChangeController::class,'cancelForm'],'POST'=>[\Clinica\Controllers\CitaChangeController::class,'cancel'],'roles'=>['Administrador','Recepcionista'],'permission'=>'gestionar_citas'],
 ];

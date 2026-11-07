@@ -79,4 +79,8 @@ P3 verificó RF06/RF07, CU05/CU06 y las tablas medicos, especialidades y medico_
 
 P4 está cerrado con 90 horarios reales, 0 bloqueos y disponibilidad contrastada con PostgreSQL. Abrir /horarios, /horarios/agenda o /bloqueos: Administrador gestiona según permisos, Recepcionista consulta y Médico consulta solo su ámbito vinculado a usuarios. SCHEDULE_WRITES_ENABLED sigue deshabilitado. El inventario, los resultados de las pruebas y las limitaciones están en [docs/horarios.md](docs/horarios.md).
 
-P5-A permite consultar las 60 citas mediante /citas (personal) o /mis-citas (paciente titular), detalle, agenda diaria y disponibilidad. El acceso del Médico se limita a sus citas y el del Paciente a las propias mediante condiciones SQL. Las rutas /citas/disponibilidad y /mis-citas/disponibilidad solo informan; no retienen ni crean un turno. P5-B, P5-C y P9 permanecen fuera de alcance. Ver [docs/citas.md](docs/citas.md).
+P5-A permite consultar las 60 citas mediante /citas (personal) o /mis-citas (paciente titular), detalle, agenda diaria y disponibilidad. El acceso del Médico se limita a sus citas y el del Paciente a las propias mediante condiciones SQL. Las rutas /citas/disponibilidad y /mis-citas/disponibilidad solo informan; no retienen ni crean un turno. P5-C y P9 permanecen fuera de alcance. P5-B está implementado con escritura deshabilitada; ver [docs/reservas.md](docs/reservas.md). Ver [docs/citas.md](docs/citas.md).
+
+## P5-C: cambios de citas
+
+Reprogramación única y cancelación implementadas con escrituras bloqueadas. Instrucciones por rol, resultados y prueba aislada propuesta en [docs/cambios-citas.md](docs/cambios-citas.md). P9 permanece pendiente.

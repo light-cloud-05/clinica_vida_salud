@@ -6,7 +6,7 @@ require dirname(__DIR__).'/backend/bootstrap.php';
 use Clinica\Repositories\Connection;
 use Clinica\Support\Environment;
 try{
-    foreach(['PATIENT_WRITES_ENABLED','MEDICAL_WRITES_ENABLED','SCHEDULE_WRITES_ENABLED'] as $flag){
+    foreach(['PATIENT_WRITES_ENABLED','MEDICAL_WRITES_ENABLED','SCHEDULE_WRITES_ENABLED','APPOINTMENT_WRITES_ENABLED','APPOINTMENT_CHANGES_ENABLED'] as $flag){
         if(Environment::get($flag)==='true'){throw new RuntimeException('Hay un indicador de escritura habilitado. No se ejecutará la auditoría de cierre.');}
     }
     $mode=$argv[1] ?? '';
@@ -28,7 +28,7 @@ try{
         if(!is_dir(dirname($path))){mkdir(dirname($path),0700,true);}
         $file=fopen($path,'x');if(!$file){throw new RuntimeException('No se pudo guardar la línea base.');}
         try{$json=json_encode($snapshot,JSON_THROW_ON_ERROR);if(fwrite($file,$json)!==strlen($json)){throw new RuntimeException('Línea base incompleta.');}}finally{fclose($file);}
-        echo 'Línea base privada creada: '.count($tables).' tablas y '.count($sequences).' secuencias. Los tres indicadores de escritura están deshabilitados.'.PHP_EOL;
+        echo 'Línea base privada creada: '.count($tables).' tablas y '.count($sequences).' secuencias. Los indicadores de escritura están deshabilitados.'.PHP_EOL;
     }else{
         if(!is_file($path)){throw new RuntimeException('Falta la línea base privada.');}
         $before=json_decode((string)file_get_contents($path),true,512,JSON_THROW_ON_ERROR);

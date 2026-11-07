@@ -87,7 +87,7 @@ try {
             $response = Invoke-WebRequest ($base+$path) -Method $method -WebSession $session -SkipHttpErrorCheck
             Assert-Cita ($response.StatusCode -eq 405) ($role+' sin escritura '+$method)
         }
-        foreach ($suffix in @('/nueva','/cancelar','/reprogramar')) {
+        foreach ($suffix in @('/nueva')) {
             $response = Invoke-WebRequest ($base+$path+$suffix) -WebSession $session -SkipHttpErrorCheck
             Assert-Cita ($response.StatusCode -eq 404) ($role+' fuera de alcance '+$suffix)
         }

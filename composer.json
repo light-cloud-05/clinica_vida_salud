@@ -3,8 +3,15 @@
   "description": "Sistema web de gestión de citas médicas",
   "type": "project",
   "license": "proprietary",
-  "require": {"php": "^8.1", "ext-mbstring": "*", "ext-pdo": "*", "ext-pdo_pgsql": "*"},
+  "require": {
+    "php": "^8.1",
+    "ext-mbstring": "*",
+    "ext-pdo": "*",
+    "ext-pdo_pgsql": "*",
+    "dompdf/dompdf": "~3.1",
+    "endroid/qr-code": "~5.0"
+  },
   "autoload": {"psr-4": {"Clinica\\": "backend/app/"}},
-  "scripts": {"test": ["@php tests/run.php", "@php tests/auth.php", "@php tests/session.php", "@php tests/pacientes.php", "@php tests/pacientes-repository.php", "@php tests/medicos.php", "@php tests/medicos-repository.php", "@php tests/horarios.php", "@php tests/horarios-repository.php", "@php tests/citas.php"], "test:auth-db": "@php tests/auth-database.php", "test:patients-db": "@php tests/pacientes-database.php", "test:medical-db": "@php tests/medicos-database.php", "test:schedules-db": "@php tests/horarios-database.php", "test:appointments-db": "@php tests/citas-database.php", "assets": "@php tools/publish-assets.php"},
+  "scripts": {"test": ["@php tests/run.php", "@php tests/auth.php", "@php tests/session.php", "@php tests/pacientes.php", "@php tests/pacientes-repository.php", "@php tests/medicos.php", "@php tests/medicos-repository.php", "@php tests/horarios.php", "@php tests/horarios-repository.php", "@php tests/citas.php", "@php tests/reservas.php", "@php tests/reservas-repository.php", "@php tests/cita-changes.php", "@php tests/cita-changes-repository.php"], "test:auth-db": "@php tests/auth-database.php", "test:patients-db": "@php tests/pacientes-database.php", "test:medical-db": "@php tests/medicos-database.php", "test:schedules-db": "@php tests/horarios-database.php", "test:appointments-db": "@php tests/citas-database.php", "assets": "@php tools/publish-assets.php"},
   "config": {"sort-packages": true}
 }
