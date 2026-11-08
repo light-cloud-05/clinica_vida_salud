@@ -158,3 +158,56 @@ footer { margin-top: 2rem; }
     .story-content p, .story-foot, .care-mark { display: none; }
     .login-form-area { padding: 2rem 1.5rem; }
 }
+
+/* P6: accessible server-rendered charts. Values remain visible without JavaScript. */
+.report-visuals{color:#17364e}
+.report-visual-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin:1.8rem 0 1.3rem}
+.report-visual-heading .eyebrow{color:#087e90}
+.report-visual-heading h2{font-size:1.65rem;font-weight:700;letter-spacing:-.04em;margin:.4rem 0}
+.report-data-label{font-size:.7rem;color:#507282;padding:.5rem .8rem;background:#e8f4f7;border-radius:30px}
+.report-state-panel{display:grid;grid-template-columns:.8fr 1.3fr;gap:2.5rem;padding:1.8rem;background:#fff;border:1px solid #dce8ed;border-radius:16px}
+.report-state-panel h3{font-size:1.1rem;font-weight:650}
+.report-state-panel p{font-size:.8rem;line-height:1.8;color:#648091}
+.report-total{display:block;font-size:3.6rem;font-weight:700;line-height:1.1;letter-spacing:-.06em;color:#087e90;margin-top:1.8rem}
+.report-total small{display:block;font-size:.75rem;letter-spacing:0;font-weight:400;color:#648091;margin-top:.5rem}
+.report-state-bars,.report-hours-card ul{padding:0;list-style:none;margin:0}
+.report-state-bars li+li{margin-top:1.1rem}
+.report-state-bars li>div,.report-hours-card li>div{display:flex;align-items:start;justify-content:space-between;gap:1rem;font-size:.8rem;margin-bottom:.45rem}
+.report-state-bars strong{white-space:nowrap}
+.report-state-bars strong small{font-size:.7rem;font-weight:400;color:#6b8596;margin-left:.75rem}
+.report-bar{display:block;width:100%;height:9px;overflow:visible}
+.report-bar-track{fill:#edf3f6}
+.report-bar-programada,.report-bar-scheduled{fill:#2474a5}
+.report-bar-confirmada,.report-bar-occupied{fill:#4e60b3}
+.report-bar-atendida,.report-bar-attended{fill:#087f87}
+.report-bar-cancelada{fill:#8a6b8e}
+.report-bar-inasistencia{fill:#b97822}
+.report-bar-available{fill:#49a88d}
+.report-chart-section{border:1px solid #dce8ed;border-radius:16px;background:#fff;margin-top:1.2rem;overflow:hidden}
+.report-chart-section summary{display:list-item;font-size:.95rem;font-weight:650;padding:1.2rem 1.5rem;cursor:pointer;border-bottom:1px solid #e8eff2;list-style-position:inside}
+.report-chart-section summary span{font-size:.7rem;font-weight:400;color:#607b8c;margin-left:.8rem}
+.report-chart-section summary:focus-visible{outline:3px solid #168b9b;outline-offset:-4px}
+.report-chart-note,.report-chart-footnote{font-size:.75rem;color:#607b8c;line-height:1.8;padding:1rem 1.5rem;margin:0}
+.report-chart-footnote{padding:1rem .25rem}
+.report-hours-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;padding:0 1.5rem 1.5rem}
+.report-hours-card{padding:1.2rem;border:1px solid #e4ecf0;border-radius:10px;min-width:0}
+.report-hours-card h4{font-size:.85rem;font-weight:650;margin-bottom:1.3rem;overflow-wrap:anywhere}
+.report-hours-card li+li{margin-top:.8rem}
+.report-hours-card li>div{font-size:.7rem}
+.report-hours-card li strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+.report-zero{padding:1rem;color:#6a7e8a;font-size:.8rem}
+.report-state-panel .report-zero{padding:1rem 0 0}
+
+@media(max-width:760px){.report-visual-heading{display:block}
+.report-data-label{display:inline-block;margin-top:.5rem}
+.report-state-panel{grid-template-columns:1fr;gap:1.5rem;padding:1.3rem}
+.report-total{font-size:2.7rem;margin-top:1rem}
+.report-hours-grid{grid-template-columns:1fr;padding:0 1rem 1rem}
+.report-chart-section summary{padding:1rem}
+.report-chart-note{padding:1rem}
+.report-state-bars li>div{font-size:.75rem}
+.report-state-bars strong small{margin-left:.35rem}
+}
+
+
+.report-summary { padding: 1.3rem; }

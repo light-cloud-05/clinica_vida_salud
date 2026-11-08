@@ -73,7 +73,7 @@ final class ReportRepository implements ReportStore
         $doctors = $statement->fetchAll();
 
         $statement = $this->pdo->prepare($cte." SELECT e.id_especialidad,e.nombre,
-            count(DISTINCT me.id_medico) AS medicos,count(f.id_cita) AS citas
+            count(DISTINCT me.id_medico) AS medicos,count(DISTINCT f.id_cita) AS citas
             FROM public.especialidades e
             LEFT JOIN public.medico_especialidad me ON me.id_especialidad=e.id_especialidad
             LEFT JOIN filtered f ON f.id_especialidad=e.id_especialidad
@@ -211,7 +211,9 @@ final class ReportRepository implements ReportStore
             foreach ($this->dates($from, $to) as $date) {
                 $periodHours += $this->hoursForSchedules(array_values(array_filter($doctorHours, static fn(array $row): bool => (int)$row['dia_semana'] === (int)$date->format('N'))));
             }
-            $doctorAppointments = array_values(array_filter($planningAppointments, static fn(array $row): bool => (int)$row['id_medico'] === $id && $row['estado'] !== 'cancelada'));
+            $doctorAppointments = array_values(array_filter($planningAppointments, static fn(array $row): bool => (int)$row['id_medico'] === $id && $row['estado'] !== 'cancelada'
+                && ($filters['especialidad'] === null || (int)$row['id_especialidad'] === $filters['especialidad'])
+                && ($filters['estado'] === null || $row['estado'] === $filters['estado'])));
             $workload[] = [
                 'id_medico'=>$id, 'medico_nombre'=>$doctor['nombre'],
                 'horas_semanales_programadas'=>$this->hoursForSchedules($doctorHours),
@@ -226,19 +228,32 @@ final class ReportRepository implements ReportStore
         $specialty_workload = [];
         foreach ($choices['specialties'] as $specialty) {
             $specialtyId = (int)$specialty['id_especialidad'];
+            if ($filters['especialidad'] !== null && $specialtyId !== $filters['especialidad']) {
+                continue;
+            }
             $associated = array_values(array_filter($doctorRows, fn(array $doctor): bool => in_array($specialtyId, $specialtyByDoctor[(int)$doctor['id_medico']] ?? [], true)));
             if (!$associated) {
                 continue;
             }
             $hoursAllocated = 0.0;
+            $periodAllocated = 0.0;
+            $availableAllocated = 0.0;
             foreach ($associated as $doctor) {
                 $doctorWorkload = $workload[array_search((int)$doctor['id_medico'], array_column($workload, 'id_medico'), true)];
                 $countSpecialties = max(1, count($specialtyByDoctor[(int)$doctor['id_medico']] ?? []));
                 $hoursAllocated += (float)$doctorWorkload['horas_semanales_programadas'] / $countSpecialties;
+                $periodAllocated += (float)$doctorWorkload['horas_programadas_periodo'] / $countSpecialties;
+                $availableAllocated += (float)$doctorWorkload['horas_disponibles'] / $countSpecialties;
             }
-            $specialtyAppointments = array_values(array_filter($planningAppointments, static fn(array $row): bool => (int)$row['id_especialidad'] === $specialtyId));
+            $specialtyAppointments = array_values(array_filter($planningAppointments, static fn(array $row): bool => (int)$row['id_especialidad'] === $specialtyId
+                && ($filters['estado'] === null || $row['estado'] === $filters['estado'])));
+            $occupied = array_values(array_filter($specialtyAppointments, static fn(array $row): bool => $row['estado'] !== 'cancelada'));
             $specialty_workload[] = ['nombre'=>$specialty['nombre'],'id_especialidad'=>$specialtyId,
                 'horas_semanales_programadas'=>round($hoursAllocated, 2),
+                'horas_programadas_periodo'=>round($periodAllocated, 2),
+                'horas_ocupadas'=>$this->hoursForAppointments($occupied),
+                'horas_atendidas'=>$this->hoursForAppointments(array_values(array_filter($occupied, static fn(array $row): bool => $row['estado'] === 'atendida'))),
+                'horas_disponibles'=>round($availableAllocated, 2),
                 'citas_programadas'=>count(array_filter($specialtyAppointments, static fn(array $row): bool => $row['estado'] !== 'cancelada')),
                 'citas_atendidas'=>$this->countState($specialtyAppointments, 'atendida')];
         }
@@ -274,7 +289,7 @@ final class ReportRepository implements ReportStore
         $from = $filters['fecha_inicio'] ?? null;
         $to = $filters['fecha_fin'] ?? null;
         $today = new \DateTimeImmutable('now', new \DateTimeZone('America/La_Paz'));
-        $fromDate = ScheduleValidator::date($from ?? '') ?? $today->setTime(0, 0);
+        $fromDate = ScheduleValidator::date($from ?? $to ?? '') ?? $today->setTime(0, 0);
         $toDate = ScheduleValidator::date($to ?? '') ?? $fromDate;
         return [$fromDate->format('Y-m-d'), $toDate->format('Y-m-d')];
     }
@@ -308,13 +323,29 @@ final class ReportRepository implements ReportStore
 
     private function hoursForSchedules(array $rows): float
     {
-        $seconds = 0;
+        // Union per doctor/day: inherited overlapping schedules must not inflate capacity.
+        $groups = [];
         foreach ($rows as $row) {
             $start = ScheduleValidator::time((string)$row['hora_inicio']);
             $end = ScheduleValidator::time((string)$row['hora_fin']);
             if ($start !== null && $end !== null && $end > $start) {
-                $seconds += ($end - $start) / 1000000;
+                $key = ($row['id_medico'] ?? 0).'|'.($row['fecha'] ?? $row['dia_semana'] ?? 'day');
+                $groups[$key][] = [$start, $end];
             }
+        }
+        $seconds = 0;
+        foreach ($groups as $intervals) {
+            usort($intervals, static fn(array $a, array $b): int => $a[0] <=> $b[0]);
+            [$start, $end] = array_shift($intervals);
+            foreach ($intervals as [$nextStart, $nextEnd]) {
+                if ($nextStart <= $end) {
+                    $end = max($end, $nextEnd);
+                } else {
+                    $seconds += ($end - $start) / 1000000;
+                    [$start, $end] = [$nextStart, $nextEnd];
+                }
+            }
+            $seconds += ($end - $start) / 1000000;
         }
         return round($seconds / 3600, 2);
     }

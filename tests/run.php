@@ -27,6 +27,15 @@ ob_start();
 (new Clinica\Controllers\HomeController())->index();
 $html = ob_get_clean();
 $check(str_contains($html, 'Clínica Vida Salud') && str_contains($html, 'bootstrap@5'), 'Vista inicial y Bootstrap');
+$routes=require dirname(__DIR__).'/backend/routes/web.php';
+$dom=new DOMDocument(); @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
+$buttons=['Reservar cita'=>'/mis-citas/reservar','Registrarme como paciente'=>'/registro','Iniciar sesión'=>'/login'];
+foreach($buttons as $label=>$path) {
+    $found=false; foreach($dom->getElementsByTagName('a') as $a) { if(trim($a->textContent)===$label && $a->getAttribute('href')===$path) { $found=true; } }
+    $check($found && isset($routes[$path]['GET']),'Acceso de portada: '.$label);
+}
+$check(!str_contains($html,'Primera entrega') && !str_contains($html,'Estamos preparando') && !str_contains($html,'Entorno de desarrollo'),'Portada sin mensajes de etapa inicial');
+$check(str_contains($html,'Demostración académica') && str_contains($html,'08:00') && str_contains($html,'18:00'),'Demostración y horario de recepción');
 $temporary = tempnam(sys_get_temp_dir(), 'cvs');
 try {
     putenv('CVS_TEST_EXISTING=externo');

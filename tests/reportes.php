@@ -38,4 +38,20 @@ ob_start();
 $render->invoke(new Clinica\Controllers\ReportController(),'index',['user'=>['id'=>1,'role'=>'Administrador','permissions'=>['generar_reportes'],'username'=>'admin'],'title'=>'Reportes','data'=>['filters'=>['fecha_inicio'=>null,'fecha_fin'=>null,'medico'=>null,'especialidad'=>null,'estado'=>null],'choices'=>['doctors'=>[],'specialties'=>[]],'report'=>['appointments'=>[],'doctors'=>[],'specialties'=>[],'attendance'=>['total'=>0,'atendidas'=>0,'inasistencias'=>0,'canceladas'=>0],'summary'=>['pacientes'=>0,'medicos'=>0,'especialidades'=>0,'citas'=>0]]]]);
 $html=ob_get_clean();
 $check(str_contains($html,'Reportes administrativos') && str_contains($html,'Exportar CSV'),'Render HTML');
+$check(str_contains($html,'Sin citas para estos filtros') && str_contains($html,'Sin datos') && !str_contains($html,'NaN') && !str_contains($html,'Infinity'),'Gráficos vacíos sin porcentajes ficticios');
+$check(str_contains($html,'class="report-bar"') && str_contains($html,'Inasistencias de pacientes') && str_contains($html,'Carga por especialidad'),'Gráficos sin JS con etiquetas de pacientes');
+$data=$exported;
+$report=$data['report']; $workload=$report['workload']; $specialtyWorkload=[]; $planningRange=$report['planning_range'];
+$percent=static fn(int $part,int $total): string=>$total>0?number_format($part*100/$total,1,',','.').' %':'Sin datos';
+$escape=static fn(mixed $value): string=>htmlspecialchars((string)($value??''),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+ob_start(); require dirname(__DIR__).'/frontend/views/reportes/charts.php'; $charts=ob_get_clean();
+$check(str_contains($charts,'100,0 %') && str_contains($charts,'0,50 h'),'Porcentajes y horas del reporte filtrado');
+$report['appointments'][0]['estado']='inasistencia'; $workload[0]['medico_nombre']='<script>alert(1)</script>';
+ob_start(); require dirname(__DIR__).'/frontend/views/reportes/charts.php'; $charts=ob_get_clean();
+$check(str_contains($charts,'&lt;script&gt;') && !str_contains($charts,'<script>'),'Etiquetas escapadas en gráficos');
+foreach(['Administrador','Recepcionista','Medico','Paciente'] as $role) {
+    $result=$service->dashboard(['id'=>1,'role'=>$role,'permissions'=>['generar_reportes']],[]);
+    $check($result['report']['summary']['citas']===1,'Rol existente con permiso: '.$role);
+}
+try{$service->dashboard(['id'=>1,'role'=>'Administrador','permissions'=>['generar_reportes']],[],'exportar_reportes');$check(false,'Exportar exige permiso propio');}catch(DomainException){$check(true,'Generar no concede exportar');}
 echo "$checks comprobaciones P6 pasaron: filtros, autorización, consultas simuladas y exportaciones.\n";
