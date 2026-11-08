@@ -42,9 +42,8 @@ final class NotificationRepository implements NotificationStore
             $lock->execute(['key' => $appointmentId.':'.$type]);
             $stmt = $this->pdo->prepare(
                 "INSERT INTO public.notificaciones
-                    (id_notificacion,id_cita,tipo,destinatario,asunto,fecha_programada,estado_envio)
-                 SELECT (SELECT COALESCE(MAX(id_notificacion),0)+1 FROM public.notificaciones),
-                    :appointment,:type,:recipient,:subject,:scheduled,'pendiente'
+                    (id_cita,tipo,destinatario,asunto,fecha_programada,estado_envio)
+                 SELECT :appointment,:type,:recipient,:subject,:scheduled,'pendiente'
                  WHERE NOT EXISTS (
                     SELECT 1 FROM public.notificaciones
                     WHERE id_cita=:same_appointment AND tipo=:same_type

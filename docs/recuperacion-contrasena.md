@@ -14,3 +14,7 @@ El cambio de contraseña actualiza `usuarios.contrasena_hash` con `password_hash
 ## Verificación
 
 La prueba simulada cubre correo inexistente, hash distinto del token, token válido, reutilización, formato inválido, confirmación y rutas. No se insertaron tokens en PostgreSQL.
+
+## Cierre SMTP
+
+Se implementó SmtpPasswordRecoveryTransport usando el transporte SMTP existente. En producción exige PASSWORD_RESET_TRANSPORT=smtp, APP_URL HTTPS sin credenciales y MAIL_HOST/PORT/USERNAME/PASSWORD/FROM/ENCRYPTION. El transporte local queda limitado a entornos no productivos y usa var/private-mail fuera de DocumentRoot. No habilitar PASSWORD_RECOVERY_WRITES_ENABLED hasta verificar un envío real autorizado. Token de 30 minutos y un solo uso, CSRF, límites y hash se conservan. Las pruebas de correo usan memoria, sin destinatarios externos.

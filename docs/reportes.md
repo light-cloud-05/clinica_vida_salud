@@ -137,3 +137,19 @@ No se autenticó en Render ni se comprobó su base. Falta revisar los gráficos
 dentro de una sesión autenticada, su vista móvil y los cuatro roles en el
 servicio público cuando se autorice publicar. No se eludió autenticación para
 hacer una vista previa.
+
+## Versión final de Reportes
+
+Chart.js 4.5.1 UMD se sirve localmente con licencia MIT, sin CDN de scripts ni
+cambios de CSP. Los tres gráficos usan exactamente las series filtradas que
+alimentan tablas/barras SVG, que se conservan como alternativa accesible.
+Se añadió sidebar interno con categorías, tarjetas superiores sticky, pacientes
+de las citas filtradas y listado de cancelaciones/inasistencias. Pagos enlaza
+solo al módulo permitido por PaymentAccess; no se inventan estadísticas de pagos.
+
+Se corrigió el alcance: médicos solo consultan/exportan sus citas y su carga;
+pacientes solo sus citas/resumen, sin bloqueos ni carga de otros médicos.
+Administración y recepción conservan el ámbito administrativo autorizado.
+El servidor impone user_id desde la identidad, ignorando _scope del navegador.
+408 comprobaciones READ ONLY locales incluyen privacidad por rol y exportaciones.
+25 pruebas P6 de servicio/presentación y 16 regresiones de cálculo pasaron.

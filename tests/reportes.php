@@ -15,9 +15,9 @@ foreach ([['fecha_inicio'=>'2026-02-30'],['fecha_inicio'=>'2026-11-08','fecha_fi
     try { ReportFilters::parse($invalid); $check(false,'Rechazo de filtros'); } catch (InvalidArgumentException) { $check(true,'Rechazo de filtros inválidos'); }
 }
 $store=new class implements ReportStore {
-    public int $calls=0;
+    public int $calls=0; public array $lastFilters=[];
     public function choices(): array{return ['doctors'=>[['id_medico'=>2,'nombre'=>'Médico']], 'specialties'=>[['id_especialidad'=>3,'nombre'=>'Cardiología']]];}
-    public function dashboard(array $filters): array{$this->calls++;return ['appointments'=>[['codigo_cita'=>'C-1','fecha'=>'2026-11-07','hora_inicio'=>'09:00','hora_fin'=>'09:30','paciente_nombre'=>'Paciente','medico_nombre'=>'Médico','especialidad_nombre'=>'Cardiología','estado'=>'atendida']], 'doctors'=>[['medico_nombre'=>'Médico','especialidades'=>'Cardiología','total'=>1,'programadas'=>0,'confirmadas'=>0,'atendidas'=>1,'canceladas'=>0,'inasistencias'=>0]], 'specialties'=>[['nombre'=>'Cardiología','medicos'=>1,'citas'=>1]], 'attendance'=>['total'=>1,'atendidas'=>1,'inasistencias'=>0,'canceladas'=>0], 'summary'=>['pacientes'=>10,'medicos'=>1,'especialidades'=>1,'citas'=>1], 'workload'=>[['medico_nombre'=>'Médico','horas_semanales_programadas'=>10,'horas_programadas_periodo'=>2,'horas_ocupadas'=>.5,'horas_atendidas'=>.5,'horas_disponibles'=>1.5,'citas_programadas'=>1,'citas_atendidas'=>1]], 'daily'=>[], 'weekly'=>[], 'specialty_workload'=>[], 'blocks'=>[], 'conflicts'=>[], 'planning_range'=>['from'=>'2026-11-07','to'=>'2026-11-07'], 'absence_note'=>'Bloqueos, no ausencias.' ];}
+    public function dashboard(array $filters): array{$this->lastFilters=$filters;$this->calls++;return ['appointments'=>[['codigo_cita'=>'C-1','fecha'=>'2026-11-07','hora_inicio'=>'09:00','hora_fin'=>'09:30','paciente_nombre'=>'Paciente','medico_nombre'=>'Médico','especialidad_nombre'=>'Cardiología','estado'=>'atendida']], 'doctors'=>[['medico_nombre'=>'Médico','especialidades'=>'Cardiología','total'=>1,'programadas'=>0,'confirmadas'=>0,'atendidas'=>1,'canceladas'=>0,'inasistencias'=>0]], 'specialties'=>[['nombre'=>'Cardiología','medicos'=>1,'citas'=>1]], 'attendance'=>['total'=>1,'atendidas'=>1,'inasistencias'=>0,'canceladas'=>0], 'summary'=>['pacientes'=>10,'medicos'=>1,'especialidades'=>1,'citas'=>1], 'workload'=>[['medico_nombre'=>'Médico','horas_semanales_programadas'=>10,'horas_programadas_periodo'=>2,'horas_ocupadas'=>.5,'horas_atendidas'=>.5,'horas_disponibles'=>1.5,'citas_programadas'=>1,'citas_atendidas'=>1]], 'daily'=>[], 'weekly'=>[], 'specialty_workload'=>[], 'blocks'=>[], 'conflicts'=>[], 'planning_range'=>['from'=>'2026-11-07','to'=>'2026-11-07'], 'absence_note'=>'Bloqueos, no ausencias.' ];}
 };
 $service=new ReportService($store);
 $data=$service->dashboard(['id'=>1,'role'=>'Administrador','permissions'=>['generar_reportes']],['medico'=>'2','especialidad'=>'3']);
@@ -54,4 +54,9 @@ foreach(['Administrador','Recepcionista','Medico','Paciente'] as $role) {
     $check($result['report']['summary']['citas']===1,'Rol existente con permiso: '.$role);
 }
 try{$service->dashboard(['id'=>1,'role'=>'Administrador','permissions'=>['generar_reportes']],[],'exportar_reportes');$check(false,'Exportar exige permiso propio');}catch(DomainException){$check(true,'Generar no concede exportar');}
+$personal=$service->dashboard(['id'=>52,'role'=>'Paciente','permissions'=>['generar_reportes']],['_scope'=>['role'=>'Administrador','user_id'=>1]]);
+$check($store->lastFilters['_scope']===['role'=>'Paciente','user_id'=>52] && !isset($personal['filters']['_scope']),'Ambito personal impuesto por servidor, sin aceptar suplantacion');
+$service->dashboard(['id'=>21,'role'=>'Medico','permissions'=>['exportar_reportes']],[],'exportar_reportes');
+$check($store->lastFilters['_scope']===['role'=>'Medico','user_id'=>21],'Exportacion medica propia');
+$check(str_contains($html,'Categorías de reportes') && str_contains($html,'report-summary-sticky') && str_contains($html,'/assets/vendor/chart.umd.min.js'),'Navegacion interna, resumen y Chart.js locales');
 echo "$checks comprobaciones P6 pasaron: filtros, autorización, consultas simuladas y exportaciones.\n";

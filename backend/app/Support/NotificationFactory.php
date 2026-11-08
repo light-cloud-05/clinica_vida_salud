@@ -31,7 +31,7 @@ final class NotificationFactory
         $from = Environment::get('MAIL_FROM');
         $port = Environment::get('MAIL_PORT', '587');
         if ($host === '' || $from === '' || !ctype_digit($port)) {
-            throw new \RuntimeException('Configuración SMTP incompleta.');
+            return new LocalMailTransport();
         }
         return new SmtpMailTransport($host, (int)$port, Environment::get('MAIL_USERNAME'), Environment::get('MAIL_PASSWORD'), $from, Environment::get('MAIL_ENCRYPTION', 'tls'));
     }

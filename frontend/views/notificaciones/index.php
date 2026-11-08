@@ -1,3 +1,4 @@
+<p class="text-secondary small">Enviado indica aceptación por el servidor SMTP. Si el correo no está configurado o falla, se registra como error; no se confirma una entrega simulada.</p>
 <div class="patient-page-heading"><div><span class="eyebrow text-secondary">CU22 · CORREO</span><h1><?= $escape($title) ?></h1><p class="text-secondary">Solo se muestran datos administrativos de la cita.</p></div></div>
 <section class="patient-card">
     <?php if (!$rows): ?><p class="mb-0 text-secondary">No hay notificaciones registradas.</p><?php else: ?>

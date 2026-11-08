@@ -37,7 +37,8 @@ $escape = isset($escape) && is_callable($escape)
 $panel = $roles[$role];
 ?>
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><?= $escape($title) ?> · Clínica Vida Salud</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous"><link rel="stylesheet" href="/assets/css/app.css"><script src="/assets/js/app.js" defer></script></head>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous"><link rel="stylesheet" href="/assets/css/app.css"><script src="/assets/js/app.js" defer></script>
+<?php if($section==='reportes'): ?><script src="/assets/vendor/chart.umd.min.js" defer></script><script src="/assets/js/reportes.js" defer></script><?php endif; ?></head>
 <body class="patient-app"><a class="visually-hidden-focusable" href="#main">Saltar al contenido</a>
 <aside class="patient-sidebar"><a class="brand text-decoration-none" href="<?= $escape($panel) ?>">✚ Vida Salud<span>CLÍNICA · GESTIÓN</span></a><nav aria-label="Navegación de gestión"><a href="<?= $escape($panel) ?>">Inicio</a>
 <?php $links=[];if(Clinica\Middleware\PatientAccess::allowed($user)){$links['pacientes']='Pacientes';}if(Clinica\Middleware\MedicalAccess::allowed($user)){$links['medicos']='Médicos';$links['especialidades']='Especialidades';}if(Clinica\Middleware\ScheduleAccess::view($user)){$links['horarios']='Horarios y agenda';} ?>

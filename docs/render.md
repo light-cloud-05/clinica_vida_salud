@@ -331,3 +331,26 @@ Después de obtener las cuatro verificaciones OK:
 - Sin modificación de `.env`, sin DDL/importaciones, sin commit/push.
 - Eliminada directiva `Listen 80` duplicada del vhost; el puerto lo configura
   `ports.conf` mediante el entrypoint existente.
+
+## Cierre operativo del servicio existente
+
+No crear otro Web Service. Mantener Auto-Deploy según la configuración existente.
+Tras el push autorizado usar Manual Deploy > Deploy latest commit, y verificar
+el hash con GET /health: expone solo status y RENDER_GIT_COMMIT (si Render lo
+proporciona), nunca consulta PostgreSQL ni devuelve configuración o secretos.
+La variable está documentada en https://render.com/docs/environment-variables .
+El build ejecuta check-platform-reqs y apache2ctl -t; Docker no está disponible
+en este equipo, por lo que el build completo se verifica en Render.
+
+La inicialización de las secciones anteriores es histórica: PostgreSQL ya está
+inicializado y los cuatro logins funcionan. NO repetir SQL ni seed.
+Conservar DB_CHECK_ENABLED=false y PAYMENT_WRITES_ENABLED=false. No se cambiaron
+flags ni variables secretas de Render durante esta revisión.
+
+SMTP pendiente de configuración real: MAIL_TRANSPORT=smtp y MAIL_HOST, MAIL_PORT,
+MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM, MAIL_ENCRYPTION=tls/ssl. Para recuperación:
+PASSWORD_RESET_TRANSPORT=smtp y APP_URL=https://clinica-vida-salud-vgve.onrender.com .
+No se habilitan flags de correo sin probar el servidor. Sin SMTP se registra error,
+no enviado. Recordatorios requieren ejecutar tools/send-reminders.php de forma
+administrativa y programada con las flags autorizadas; no se programó un servicio
+nuevo ni se enviaron correos reales durante las pruebas.

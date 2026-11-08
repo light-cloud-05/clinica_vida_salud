@@ -211,3 +211,16 @@ footer { margin-top: 2rem; }
 
 
 .report-summary { padding: 1.3rem; }
+
+/* Report workspace: internal navigation and persistent statistical overview. */
+.report-layout{display:grid;grid-template-columns:185px minmax(0,1fr);gap:1.2rem;align-items:start}
+.report-sidebar{position:sticky;top:1rem;background:#fff;border:1px solid #dae8ed;border-radius:14px;padding:1rem}
+.report-sidebar .eyebrow{font-size:.58rem;color:#608396}.report-sidebar nav{display:grid;gap:.35rem;margin-top:.8rem}
+.report-sidebar a{color:#315d73;text-decoration:none;padding:.65rem .55rem;border-radius:7px;font-size:.75rem}
+.report-sidebar a:hover,.report-sidebar a[aria-current]{background:#eaf6f8;color:#087e90}.report-sidebar p{font-size:.65rem;line-height:1.7;color:#758c9a;margin:1rem 0 0}
+.report-content{min-width:0}.report-summary-sticky{position:sticky;top:0;z-index:5;background:#f3f8f8;padding-block:.7rem;border-bottom:1px solid #dce8ed;margin-top:0}
+.report-summary-sticky .report-summary{padding:.8rem}.report-summary-sticky .display-6{font-size:1.8rem}.report-summary-sticky p{font-size:.65rem}
+.report-content section[id],.report-content div[id]{scroll-margin-top:180px}.report-canvas-grid{display:grid;grid-template-columns:1fr;gap:1rem;margin-bottom:1rem}.report-canvas-card{padding:1.3rem}.report-canvas-card h3{font-size:1rem;margin-bottom:1rem}.report-canvas-frame{height:310px;position:relative}.report-canvas-empty{display:grid;place-items:center;color:#6a7e8a;font-size:.85rem;text-align:center}
+@media(min-width:1500px){.report-canvas-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-canvas-card:first-child{grid-column:span 2}}
+@media(max-width:1050px){.report-layout{grid-template-columns:1fr}.report-sidebar{position:static}.report-sidebar nav{display:flex;flex-wrap:wrap;gap:.35rem}.report-sidebar a{border:1px solid #dfebef;padding:.5rem .65rem}.report-sidebar p{margin-top:.6rem}.report-canvas-frame{height:280px}}
+@media(max-width:760px){.report-summary-sticky .report-summary{padding:.65rem}.report-summary-sticky .display-6{font-size:1.4rem}.report-summary-sticky small{font-size:.6rem}.report-summary-sticky .eyebrow{letter-spacing:.03em}.report-canvas-card{padding:.9rem}.report-content section[id],.report-content div[id]{scroll-margin-top:230px}}

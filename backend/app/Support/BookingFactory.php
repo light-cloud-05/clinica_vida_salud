@@ -10,6 +10,7 @@ final class BookingFactory
     public static function service(): ReservaService
     {
         $pdo=Connection::appointmentCreation(require dirname(__DIR__,2).'/config/database.php');
-        return new ReservaService(new ReservaRepository($pdo,NotificationFactory::forPdo($pdo)),self::enabled());
+        $notifications=Environment::get('NOTIFICATION_WRITES_ENABLED')==='true' ? NotificationFactory::forPdo($pdo) : null;
+        return new ReservaService(new ReservaRepository($pdo,$notifications),self::enabled());
     }
 }

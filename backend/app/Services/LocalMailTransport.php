@@ -6,6 +6,6 @@ final class LocalMailTransport implements MailTransport
 {
     public function send(string $recipient, string $subject, string $body): void
     {
-        error_log('Correo simulado de Clínica Vida Salud preparado para '.$recipient.' con asunto: '.$subject);
+        throw new \RuntimeException('SMTP no configurado: no se envio ningun correo.');
     }
 }

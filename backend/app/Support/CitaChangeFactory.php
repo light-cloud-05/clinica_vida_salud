@@ -10,6 +10,7 @@ final class CitaChangeFactory
     public static function writer():CitaChangeService
     {
         $pdo=Connection::appointmentChanges(require dirname(__DIR__,2).'/config/database.php');
-        return new CitaChangeService(new CitaChangeRepository($pdo,NotificationFactory::forPdo($pdo)),true);
+        $notifications=Environment::get('NOTIFICATION_WRITES_ENABLED')==='true' ? NotificationFactory::forPdo($pdo) : null;
+        return new CitaChangeService(new CitaChangeRepository($pdo,$notifications),true);
     }
 }

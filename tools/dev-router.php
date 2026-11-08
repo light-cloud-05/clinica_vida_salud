@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 // Lista cerrada: el servidor temporal solo entrega los recursos públicos previstos.
-if (in_array($path, ['/assets/css/app.css', '/assets/js/app.js', '/assets/js/consultas-voz.js'], true)) {
+if (in_array($path, ['/assets/css/app.css', '/assets/css/home.css', '/assets/js/app.js', '/assets/js/reportes.js', '/assets/vendor/chart.umd.min.js', '/assets/js/consultas-voz.js'], true)) {
     return false;
 }
 require dirname(__DIR__) . '/public/index.php';

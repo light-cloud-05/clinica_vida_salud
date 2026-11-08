@@ -21,6 +21,13 @@ final class ReportRepository implements ReportStore
     {
         $where = ['TRUE'];
         $params = [];
+        if (isset($filters['_scope'])) {
+            $patient = $filters['_scope']['role'] === 'Paciente';
+            $where[] = $patient
+                ? 'c.id_paciente IN (SELECT id_paciente FROM public.pacientes WHERE id_usuario=:scope_user)'
+                : 'c.id_medico IN (SELECT id_medico FROM public.medicos WHERE id_usuario=:scope_user)';
+            $params['scope_user'] = $filters['_scope']['user_id'];
+        }
         if ($filters['fecha_inicio'] !== null) {
             $where[] = 'c.fecha>=:fecha_inicio';
             $params['fecha_inicio'] = $filters['fecha_inicio'];
@@ -47,7 +54,7 @@ final class ReportRepository implements ReportStore
     public function dashboard(array $filters): array
     {
         [$cte, $params] = $this->filtered($filters);
-        $statement = $this->pdo->prepare($cte." SELECT f.id_cita,f.codigo_cita,f.fecha,f.hora_inicio,f.hora_fin,f.estado,
+        $statement = $this->pdo->prepare($cte." SELECT f.id_cita,f.id_paciente,f.id_medico,f.id_especialidad,f.codigo_cita,f.fecha,f.hora_inicio,f.hora_fin,f.estado,
             p.nombres||' '||p.apellidos AS paciente_nombre,
             m.nombres||' '||m.apellidos AS medico_nombre,e.nombre AS especialidad_nombre
             FROM filtered f JOIN public.pacientes p ON p.id_paciente=f.id_paciente
@@ -95,8 +102,24 @@ final class ReportRepository implements ReportStore
             'especialidades' => (int)$this->pdo->query('SELECT count(*) FROM public.especialidades')->fetchColumn(),
             'citas' => count($appointments),
         ];
+        if (isset($filters['_scope'])) {
+            $statement = $this->pdo->prepare($cte.' SELECT count(DISTINCT id_paciente) AS pacientes,count(DISTINCT id_medico) AS medicos,count(DISTINCT id_especialidad) AS especialidades FROM filtered');
+            $statement->execute($params);
+            $totals = $statement->fetch();
+            foreach (['pacientes','medicos','especialidades'] as $field) { $summary[$field] = (int)($totals[$field] ?? 0); }
+            $doctors = array_values(array_filter($doctors, static fn(array $row): bool => (int)$row['total'] > 0));
+            $specialties = array_values(array_filter($specialties, static fn(array $row): bool => (int)$row['citas'] > 0));
+            foreach ($specialties as &$specialty) {
+                $ids = [];
+                foreach ($appointments as $appointment) {
+                    if ((int)$appointment['id_especialidad'] === (int)$specialty['id_especialidad']) { $ids[$appointment['id_medico']] = true; }
+                }
+                $specialty['medicos'] = count($ids);
+            }
+            unset($specialty);
+        }
         $planning = $this->planning($filters, $appointments);
-        return compact('appointments','doctors','specialties','attendance','summary') + $planning;
+        return compact('appointments','doctors','specialties','attendance','summary') + ['scope_label'=>isset($filters['_scope'])?'Resultados personales':'Catálogo global'] + $planning;
     }
 
     private function planning(array $filters, array $appointments): array
@@ -104,6 +127,15 @@ final class ReportRepository implements ReportStore
         $choices = $this->choices();
         $selectedDoctor = $filters['medico'];
         $doctorRows = $choices['doctors'];
+        if (isset($filters['_scope'])) {
+            if ($filters['_scope']['role'] === 'Paciente') {
+                return ['daily'=>[], 'weekly'=>[], 'workload'=>[], 'specialty_workload'=>[], 'blocks'=>[], 'conflicts'=>[], 'planning_range'=>[]];
+            }
+            $statement = $this->pdo->prepare('SELECT id_medico FROM public.medicos WHERE id_usuario=:scope_user');
+            $statement->execute(['scope_user'=>$filters['_scope']['user_id']]);
+            $own = array_map('intval', $statement->fetchAll(\PDO::FETCH_COLUMN));
+            $doctorRows = array_values(array_filter($doctorRows, static fn(array $row): bool => in_array((int)$row['id_medico'], $own, true)));
+        }
         if ($selectedDoctor !== null) {
             $doctorRows = array_values(array_filter($doctorRows, static fn(array $row): bool => (int)$row['id_medico'] === $selectedDoctor));
         }

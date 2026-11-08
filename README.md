@@ -1,6 +1,8 @@
 # Clínica Vida Salud
 
-Sistema Web de Gestión de Citas Médicas: autenticación, P2 de pacientes, P3 de médicos/especialidades, P4 de horarios y P5-A de consulta de citas/disponibilidad. Las escrituras anteriores permanecen bloqueadas y P5-A solo tiene consultas GET mediante PDO de lectura. No incluye crear, cancelar, reprogramar ni cobrar citas. Ver [citas](docs/citas.md), [horarios](docs/horarios.md), [médicos y especialidades](docs/medicos-especialidades.md), [pacientes](docs/pacientes.md) y [autenticación](docs/autenticacion.md).
+Sistema de citas médicas con PHP nativo, PostgreSQL, Bootstrap 5 y Chart.js. Incluye autenticación y recuperación SMTP, pacientes, médicos/especialidades, horarios, reservas, reprogramación y cancelación, asistencia, historial clínico, reportes PDF/CSV, auditoría, notificaciones y consultas por voz. Los pagos son exclusivamente académicos; no se habilitan cobros reales.
+
+URL pública: https://clinica-vida-salud-vgve.onrender.com/ . Estado y evidencia de esta revisión: [ENTREGA_FINAL](docs/ENTREGA_FINAL.md). Las escrituras requieren sus flags independientes y autorización de producción; que una función exista no implica que esté habilitada en Render. No reimportar el esquema ni repetir el seed.
 
 ## Requisitos y preparación
 

@@ -19,7 +19,8 @@ RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --opt
 COPY docker/apache-vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/entrypoint.sh /usr/local/bin/clinica-entrypoint
 RUN chmod 755 /usr/local/bin/clinica-entrypoint \
-    && chown -R www-data:www-data /var/www/html
+    && chown -R www-data:www-data /var/www/html \
+    && apache2ctl -t
 
 EXPOSE 10000
 ENTRYPOINT ["clinica-entrypoint"]

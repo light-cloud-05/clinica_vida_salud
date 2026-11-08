@@ -7,3 +7,6 @@
 *.log
 /.idea/
 /.vscode/
+
+*.backup
+*.clixml

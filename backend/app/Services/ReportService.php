@@ -14,7 +14,7 @@ final class ReportService
         $allowed = $permission === 'exportar_reportes'
             ? ReportAccess::canExport($actor)
             : ReportAccess::canGenerate($actor);
-        if (!$allowed) {
+        if (!$allowed || !in_array($actor['role'] ?? '', ['Administrador','Recepcionista','Medico','Paciente'], true)) {
             throw new \DomainException('Reportes no autorizados.');
         }
     }
@@ -29,6 +29,10 @@ final class ReportService
                 throw new \DomainException('El filtro solicitado no existe.');
             }
         }
-        return ['filters'=>$filters,'choices'=>$choices,'report'=>$this->store->dashboard($filters)];
+        $scoped = $filters;
+        if (in_array($actor['role'], ['Medico','Paciente'], true)) {
+            $scoped['_scope'] = ['role'=>$actor['role'], 'user_id'=>(int)$actor['id']];
+        }
+        return ['filters'=>$filters,'choices'=>$choices,'report'=>$this->store->dashboard($scoped)];
     }
 }

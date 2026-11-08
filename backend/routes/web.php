@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 return [
+    '/health' => ['GET'=>[\Clinica\Controllers\HealthController::class,'index']],
     '/consultas-voz' => ['GET'=>[\Clinica\Controllers\ConsultaVozController::class,'index'],'roles'=>['Administrador','Recepcionista','Medico','Paciente'],'permission'=>'realizar_consultas_voz'],
     '/consultas-voz/consultar' => ['POST'=>[\Clinica\Controllers\ConsultaVozController::class,'query'],'roles'=>['Administrador','Recepcionista','Medico','Paciente'],'permission'=>'realizar_consultas_voz'],
     '/' => ['GET'=>[\Clinica\Controllers\HomeController::class, 'index']],
